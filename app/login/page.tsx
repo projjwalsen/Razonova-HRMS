@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import gsap from 'gsap';
 import Link from 'next/link';
