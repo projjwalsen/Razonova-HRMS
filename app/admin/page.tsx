@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   Building2,
   Users,
@@ -142,6 +143,59 @@ export default function SuperAdminDashboard() {
     { id: 3, company: 'CloudBase Inc', type: 'Custom Integration', requested: '2024-03-16', status: 'pending' },
   ];
 
+  const companySubscriptionData = [
+    {
+      id: 1,
+      company: 'Acme Corporation',
+      plan: 'Enterprise',
+      employees: { used: 245, limit: 500 },
+      storage: { used: 45.2, limit: 100, unit: 'GB' },
+      revenue: '$12,500',
+      renewalDate: '2024-04-15',
+      status: 'active',
+    },
+    {
+      id: 2,
+      company: 'TechStart Inc',
+      plan: 'Professional',
+      employees: { used: 89, limit: 50 },
+      storage: { used: 6.2, limit: 10, unit: 'GB' },
+      revenue: '$5,400',
+      renewalDate: '2024-04-20',
+      status: 'over-limit',
+    },
+    {
+      id: 3,
+      company: 'Global Solutions',
+      plan: 'Enterprise',
+      employees: { used: 456, limit: 500 },
+      storage: { used: 78.5, limit: 100, unit: 'GB' },
+      revenue: '$15,000',
+      renewalDate: '2024-05-01',
+      status: 'active',
+    },
+    {
+      id: 4,
+      company: 'Startup Labs',
+      plan: 'Starter',
+      employees: { used: 34, limit: 10 },
+      storage: { used: 0.8, limit: 1, unit: 'GB' },
+      revenue: '$0',
+      renewalDate: '2024-04-10',
+      status: 'trial',
+    },
+    {
+      id: 5,
+      company: 'Digital Dynamics',
+      plan: 'Professional',
+      employees: { used: 156, limit: 50 },
+      storage: { used: 8.9, limit: 10, unit: 'GB' },
+      revenue: '$8,900',
+      renewalDate: '2024-04-25',
+      status: 'over-limit',
+    },
+  ];
+
   return (
     <div className="p-8">
       <div ref={dashboardRef}>
@@ -231,6 +285,123 @@ export default function SuperAdminDashboard() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Company Subscriptions Widget */}
+            <div className="dashboard-item">
+              <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold font-['Montserrat'] flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Company Subscriptions
+                  </h3>
+                  <Link
+                    href="/admin/subscription-setup"
+                    className="text-sm text-black hover:underline flex items-center gap-1"
+                  >
+                    Configure Plans
+                    <Settings className="w-4 h-4" />
+                  </Link>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold font-['Montserrat'] mb-1">{companySubscriptionData.length}</div>
+                    <div className="text-xs text-gray-600">Total Companies</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold font-['Montserrat'] text-green-600 mb-1">
+                      ${companySubscriptionData.reduce((sum, c) => sum + Number(c.revenue.replace('$', '').replace(',', '')), 0).toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-600">Monthly Revenue</div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-2xl font-bold font-['Montserrat'] text-red-600 mb-1">
+                      {companySubscriptionData.filter(c => c.status === 'over-limit').length}
+                    </div>
+                    <div className="text-xs text-gray-600">Need Upgrade</div>
+                  </div>
+                </div>
+
+                {/* Company List */}
+                <div className="space-y-3">
+                  {companySubscriptionData.map((company) => {
+                    const employeePercentage = (company.employees.used / company.employees.limit) * 100;
+                    const storagePercentage = (company.storage.used / company.storage.limit) * 100;
+
+                    return (
+                      <div
+                        key={company.id}
+                        className="p-4 bg-gray-50 rounded-lg border-2 border-gray-100 hover:border-black transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white text-xs font-bold">
+                              {company.company.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold text-sm">{company.company}</p>
+                                {company.status === 'over-limit' && (
+                                  <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-semibold rounded">Over Limit</span>
+                                )}
+                                {company.status === 'trial' && (
+                                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">Trial</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500">{company.plan} • Renews {company.renewalDate}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-green-600">{company.revenue}/mo</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-500">Employees</span>
+                              <span className={`text-xs font-bold ${employeePercentage > 100 ? 'text-red-600' : ''}`}>
+                                {company.employees.used} / {company.employees.limit}
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  employeePercentage > 100 ? 'bg-red-500' : 'bg-black'
+                                }`}
+                                style={{ width: `${Math.min(employeePercentage, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-500">Storage</span>
+                              <span className="text-xs font-bold">
+                                {company.storage.used} / {company.storage.limit} {company.storage.unit}
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                                style={{ width: `${storagePercentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 text-center">
+                  <Link href="/admin/companies" className="text-sm text-gray-600 hover:text-black hover:underline">
+                    View All Companies →
+                  </Link>
+                </div>
+              </div>
+            </div>
+
             {/* Recent Companies */}
             <div className="dashboard-item">
               <div className="p-6 bg-white rounded-xl border-2 border-gray-100">

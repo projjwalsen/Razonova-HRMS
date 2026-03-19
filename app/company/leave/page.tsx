@@ -23,6 +23,8 @@ export default function LeavePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
+  const [medicalDocument, setMedicalDocument] = useState<File | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,13 +132,63 @@ export default function LeavePage() {
 
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate mandatory attachments
+    if ((leaveType === 'sick' || leaveType === 'maternity') && !medicalDocument) {
+      alert('Medical document is required for ' + (leaveType === 'sick' ? 'Sick' : 'Maternity/Paternity') + ' Leave');
+      return;
+    }
+
     alert('Leave request submitted successfully!');
     setShowApplyForm(false);
     setLeaveType('casual');
     setStartDate('');
     setEndDate('');
     setReason('');
+    setMedicalDocument(null);
+    setDocumentPreview('');
   };
+
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!validTypes.includes(file.type)) {
+        alert('Only PDF, JPEG, and PNG files are allowed');
+        return;
+      }
+
+      setMedicalDocument(file);
+
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setDocumentPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setDocumentPreview('PDF');
+      }
+    }
+  };
+
+  const handleRemoveDocument = () => {
+    setMedicalDocument(null);
+    setDocumentPreview('');
+  };
+
+  const requiresAttachment = leaveType === 'sick' || leaveType === 'maternity';
+  const attachmentLabel = leaveType === 'sick'
+    ? 'Medical Certificate/Doctor\'s Note'
+    : 'Medical Certificate for Maternity/Paternity Leave';
 
   const handleApprove = (id: number) => {
     alert(`Leave request ${id} approved!`);
@@ -260,6 +312,72 @@ export default function LeavePage() {
                     required
                   />
                 </div>
+
+                {/* Mandatory Attachment for Sick/Maternity Leave */}
+                {requiresAttachment && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">
+                      {attachmentLabel} *
+                      <span className="text-red-600 ml-1">(Required)</span>
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-black transition-colors">
+                      {documentPreview ? (
+                        <div className="relative">
+                          {documentPreview === 'PDF' ? (
+                            <div className="flex items-center justify-center p-8 bg-red-50 rounded-lg">
+                              <div className="text-center">
+                                <FileText className="w-16 h-16 text-red-500 mx-auto mb-2" />
+                                <p className="font-semibold text-red-700">{medicalDocument?.name}</p>
+                                <p className="text-sm text-red-600">PDF Document</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={documentPreview}
+                              alt="Document preview"
+                              className="w-full h-48 object-cover rounded-lg"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleRemoveDocument}
+                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={handleDocumentUpload}
+                            className="hidden"
+                            id="medicalDocument"
+                          />
+                          <label
+                            htmlFor="medicalDocument"
+                            className="cursor-pointer inline-flex flex-col items-center"
+                          >
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                              <FileText className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <span className="text-sm font-semibold text-gray-600">
+                              Click to upload {attachmentLabel.toLowerCase()}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 5MB)</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      ⚠️ {leaveType === 'sick'
+                        ? 'Sick leave requires a valid medical certificate from a registered practitioner'
+                        : 'Maternity/Paternity leave requires a medical certificate from a healthcare provider'
+                      }
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex gap-4">
                   <button

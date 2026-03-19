@@ -43,6 +43,7 @@ export default function Sidebar() {
     { href: '/admin/users', label: 'All Users', icon: Users },
     { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
     { href: '/admin/settings', label: 'System Settings', icon: Shield },
+    { href:'/admin/subscriptions', label: 'Subscriptions', icon: TrendingUp }
   ];
 
   const navItems = isSuperAdmin ? superAdminNavItems : adminNavItems;

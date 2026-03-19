@@ -17,7 +17,8 @@ export default function AttendancePage() {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'today' | 'history' | 'requests'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'history' | 'calendar' | 'requests'>('today');
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,6 +64,41 @@ export default function AttendancePage() {
     { id: 2, employee: 'Jane Smith', date: '2024-03-14', reason: 'Medical emergency', requestedTime: '10:00 AM', status: 'Approved' },
   ];
 
+  const attendanceStats = [
+    { label: 'Days Present', value: '18', change: '+2 from last month', color: 'green' },
+    { label: 'Days Absent', value: '2', change: '-1 from last month', color: 'red' },
+    { label: 'Late Arrivals', value: '3', change: 'Same as last month', color: 'yellow' },
+    { label: 'Total Hours', value: '162h', change: '+12h from last month', color: 'blue' },
+  ];
+
+  const getCalendarDays = () => {
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+
+    const days = [];
+    for (let i = 0; i < startDay; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(i);
+    }
+    return days;
+  };
+
+  const getAttendanceForDay = (day: number | null) => {
+    if (!day) return null;
+    // Simulated attendance data
+    const dayNum = day % 7;
+    if (dayNum === 0 || dayNum === 6) return 'weekend';
+    if (day === 5 || day === 12) return 'absent';
+    if (day === 8 || day === 15) return 'late';
+    return 'present';
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Present':
@@ -105,6 +141,25 @@ export default function AttendancePage() {
         <div className="mb-8 attendance-item">
           <h1 className="text-3xl font-bold font-['Montserrat']">Attendance Management</h1>
           <p className="text-gray-600 mt-1">Track and manage employee attendance</p>
+        </div>
+
+        {/* Attendance Statistics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 attendance-item">
+          {attendanceStats.map((stat, index) => {
+            const colorClasses = {
+              green: 'bg-green-50 border-green-200',
+              red: 'bg-red-50 border-red-200',
+              yellow: 'bg-yellow-50 border-yellow-200',
+              blue: 'bg-blue-50 border-blue-200',
+            };
+            return (
+              <div key={index} className={`p-6 rounded-xl border-2 ${colorClasses[stat.color as keyof typeof colorClasses]}`}>
+                <div className="text-3xl font-bold font-['Montserrat'] mb-1">{stat.value}</div>
+                <div className="text-sm font-semibold text-gray-700 mb-1">{stat.label}</div>
+                <div className="text-xs text-gray-500">{stat.change}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Check In/Out Card */}
@@ -193,6 +248,16 @@ export default function AttendancePage() {
               My History
             </button>
             <button
+              onClick={() => setActiveTab('calendar')}
+              className={`px-6 py-3 font-semibold transition-all duration-300 ${
+                activeTab === 'calendar'
+                  ? 'text-black border-b-2 border-black'
+                  : 'text-gray-500 hover:text-black'
+              }`}
+            >
+              Calendar View
+            </button>
+            <button
               onClick={() => setActiveTab('requests')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'requests'
@@ -242,9 +307,132 @@ export default function AttendancePage() {
           </div>
         )}
 
+        {/* Calendar View */}
+        {activeTab === 'calendar' && (
+          <div className="attendance-item">
+            <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1))}
+                  className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  ← Previous
+                </button>
+                <h2 className="text-2xl font-bold font-['Montserrat']">
+                  {selectedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h2>
+                <button
+                  onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1))}
+                  className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <div key={day} className="text-center font-semibold text-gray-600 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {getCalendarDays().map((day, index) => {
+                  const attendance = getAttendanceForDay(day);
+                  const statusColors = {
+                    present: 'bg-green-100 text-green-700 border-green-300',
+                    absent: 'bg-red-100 text-red-700 border-red-300',
+                    late: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                    weekend: 'bg-gray-100 text-gray-500 border-gray-300',
+                  };
+
+                  return (
+                    <div
+                      key={index}
+                      className={`aspect-square flex items-center justify-center rounded-lg border-2 text-sm font-semibold transition-all hover:scale-105 ${
+                        day
+                          ? statusColors[attendance as keyof typeof statusColors]
+                          : 'bg-transparent border-transparent'
+                      }`}
+                    >
+                      {day && (
+                        <div className="text-center">
+                          <div>{day}</div>
+                          {attendance === 'present' && <div className="text-xs">✓</div>}
+                          {attendance === 'absent' && <div className="text-xs">✗</div>}
+                          {attendance === 'late' && <div className="text-xs">!</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-6 mt-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-green-100 border-2 border-green-300 rounded" />
+                  <span>Present</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-100 border-2 border-red-300 rounded" />
+                  <span>Absent</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-300 rounded" />
+                  <span>Late</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-gray-100 border-2 border-gray-300 rounded" />
+                  <span>Weekend</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Attendance History */}
         {activeTab === 'history' && (
           <div className="attendance-item">
+            {/* Filters */}
+            <div className="mb-6 p-6 bg-white rounded-xl border-2 border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">From Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">To Date</label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Status Filter</label>
+                  <select className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black">
+                    <option>All</option>
+                    <option>Present</option>
+                    <option>Absent</option>
+                    <option>Late</option>
+                    <option>Weekend</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center justify-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
               <div className="overflow-x-auto">
                 <table className="w-full">

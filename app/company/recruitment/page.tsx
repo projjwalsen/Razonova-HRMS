@@ -5,6 +5,8 @@ import AppLayout from '@/components/AppLayout';
 export default function RecruitmentPage() {
   const [activeTab, setActiveTab] = useState<'jobs' | 'candidates' | 'interviews'>('jobs');
   const [showJobForm, setShowJobForm] = useState(false);
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string>('');
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -15,6 +17,37 @@ export default function RecruitmentPage() {
       (item as HTMLElement).style.opacity = '0';
     });
   }, [activeTab, showJobForm]);
+
+  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file');
+        return;
+      }
+
+      setCoverImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveCoverImage = () => {
+    setCoverImage(null);
+    setCoverImagePreview('');
+  };
 
   const recruitmentStats = [
     { label: 'Open Positions', value: '12', icon: '📋' },
@@ -180,6 +213,51 @@ export default function RecruitmentPage() {
                 </button>
               </div>
               <form className="space-y-6">
+                {/* Cover Image Upload */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Cover Image</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-black transition-colors">
+                    {coverImagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={coverImagePreview}
+                          alt="Cover preview"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoverImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCoverImageUpload}
+                          className="hidden"
+                          id="coverImage"
+                        />
+                        <label
+                          htmlFor="coverImage"
+                          className="cursor-pointer inline-flex flex-col items-center"
+                        >
+                          <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-sm font-semibold text-gray-600">Click to upload cover image</span>
+                          <span className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 5MB</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold mb-2">Job Title *</label>

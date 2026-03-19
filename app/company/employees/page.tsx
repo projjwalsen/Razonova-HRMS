@@ -6,15 +6,57 @@ import {
   Plus,
   Edit,
   Trash2,
+  DollarSign,
+  TrendingUp,
+  Percent,
+  Calendar,
 } from 'lucide-react';
 import Tooltip from '@/components/Tooltip';
 
+interface SalaryConfig {
+  baseSalary: number;
+  currency: string;
+  paymentFrequency: 'monthly' | 'bi-weekly' | 'weekly';
+  allowances: {
+    housing: number;
+    transport: number;
+    medical: number;
+    other: number;
+  };
+  deductions: {
+    tax: number;
+    pension: number;
+    insurance: number;
+    other: number;
+  };
+  effectiveDate: string;
+}
+
 export default function EmployeesPage() {
-  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'departments'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'add' | 'departments' | 'salary'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
+  const [selectedEmployeeForSalary, setSelectedEmployeeForSalary] = useState<any>(null);
+  const [salaryConfig, setSalaryConfig] = useState<SalaryConfig>({
+    baseSalary: 0,
+    currency: 'USD',
+    paymentFrequency: 'monthly',
+    allowances: {
+      housing: 0,
+      transport: 0,
+      medical: 0,
+      other: 0,
+    },
+    deductions: {
+      tax: 0,
+      pension: 0,
+      insurance: 0,
+      other: 0,
+    },
+    effectiveDate: '',
+  });
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -412,6 +454,17 @@ export default function EmployeesPage() {
                   Employee List
                 </button>
                 <button
+                  onClick={() => setActiveTab('salary')}
+                  className={`px-6 py-3 font-semibold transition-all duration-300 ${
+                    activeTab === 'salary'
+                      ? 'text-black border-b-2 border-black'
+                      : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  <DollarSign className="w-4 h-4 inline mr-1" />
+                  Salary Setup
+                </button>
+                <button
                   onClick={() => setActiveTab('departments')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'departments'
@@ -529,6 +582,378 @@ export default function EmployeesPage() {
                     </table>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Salary Setup */}
+            {activeTab === 'salary' && (
+              <div className="employee-item">
+                {!selectedEmployeeForSalary ? (
+                  /* Employee Selection for Salary */
+                  <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+                    <h3 className="text-xl font-bold font-['Montserrat'] mb-6 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      Select Employee for Salary Configuration
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {employees.map((employee) => (
+                        <div
+                          key={employee.id}
+                          onClick={() => {
+                            setSelectedEmployeeForSalary(employee);
+                            setSalaryConfig({
+                              baseSalary: employee.salary || 0,
+                              currency: 'USD',
+                              paymentFrequency: 'monthly',
+                              allowances: {
+                                housing: 0,
+                                transport: 0,
+                                medical: 0,
+                                other: 0,
+                              },
+                              deductions: {
+                                tax: 0,
+                                pension: 0,
+                                insurance: 0,
+                                other: 0,
+                              },
+                              effectiveDate: new Date().toISOString().split('T')[0],
+                            });
+                          }}
+                          className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-black cursor-pointer transition-all"
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white text-sm font-bold">
+                              {employee.firstName[0]}{employee.lastName[0]}
+                            </div>
+                            <div>
+                              <p className="font-semibold">{employee.firstName} {employee.lastName}</p>
+                              <p className="text-xs text-gray-600">{employee.position}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600">{employee.department}</p>
+                          <p className="text-lg font-bold text-green-600 mt-2">
+                            ${employee.salary?.toLocaleString() || '0'}/year
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Salary Configuration Form */
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Configuration Form */}
+                    <div className="lg:col-span-2 space-y-6">
+                      <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            <h3 className="text-xl font-bold font-['Montserrat'] flex items-center gap-2">
+                              <DollarSign className="w-5 h-5" />
+                              Salary Configuration
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {selectedEmployeeForSalary.firstName} {selectedEmployeeForSalary.lastName} - {selectedEmployeeForSalary.position}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setSelectedEmployeeForSalary(null)}
+                            className="text-gray-400 hover:text-black"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {/* Base Salary */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Base Salary (Annual) *</label>
+                            <input
+                              type="number"
+                              value={salaryConfig.baseSalary}
+                              onChange={(e) => setSalaryConfig({ ...salaryConfig, baseSalary: Number(e.target.value) })}
+                              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Currency *</label>
+                            <select
+                              value={salaryConfig.currency}
+                              onChange={(e) => setSalaryConfig({ ...salaryConfig, currency: e.target.value })}
+                              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                            >
+                              <option value="USD">USD ($)</option>
+                              <option value="EUR">EUR (€)</option>
+                              <option value="GBP">GBP (£)</option>
+                              <option value="INR">INR (₹)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-2">Payment Frequency *</label>
+                            <select
+                              value={salaryConfig.paymentFrequency}
+                              onChange={(e) => setSalaryConfig({ ...salaryConfig, paymentFrequency: e.target.value as any })}
+                              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                            >
+                              <option value="monthly">Monthly</option>
+                              <option value="bi-weekly">Bi-Weekly</option>
+                              <option value="weekly">Weekly</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Allowances */}
+                        <div className="mb-6">
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600" />
+                            Allowances
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Housing</label>
+                              <input
+                                type="number"
+                                value={salaryConfig.allowances.housing}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  allowances: { ...salaryConfig.allowances, housing: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Transport</label>
+                              <input
+                                type="number"
+                                value={salaryConfig.allowances.transport}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  allowances: { ...salaryConfig.allowances, transport: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Medical</label>
+                              <input
+                                type="number"
+                                value={salaryConfig.allowances.medical}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  allowances: { ...salaryConfig.allowances, medical: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Other</label>
+                              <input
+                                type="number"
+                                value={salaryConfig.allowances.other}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  allowances: { ...salaryConfig.allowances, other: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Deductions */}
+                        <div className="mb-6">
+                          <h4 className="text-lg font-bold mb-4 flex items-center gap-2">
+                            <Percent className="w-4 h-4 text-red-600" />
+                            Deductions
+                          </h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Income Tax (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={salaryConfig.deductions.tax}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  deductions: { ...salaryConfig.deductions, tax: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Pension (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={salaryConfig.deductions.pension}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  deductions: { ...salaryConfig.deductions, pension: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Insurance (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={salaryConfig.deductions.insurance}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  deductions: { ...salaryConfig.deductions, insurance: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold mb-2">Other (%)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={salaryConfig.deductions.other}
+                                onChange={(e) => setSalaryConfig({
+                                  ...salaryConfig,
+                                  deductions: { ...salaryConfig.deductions, other: Number(e.target.value) }
+                                })}
+                                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Effective Date */}
+                        <div className="mb-6">
+                          <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            Effective Date *
+                          </label>
+                          <input
+                            type="date"
+                            value={salaryConfig.effectiveDate}
+                            onChange={(e) => setSalaryConfig({ ...salaryConfig, effectiveDate: e.target.value })}
+                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                            required
+                          />
+                        </div>
+
+                        <div className="flex gap-4">
+                          <button className="px-8 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                            Save Salary Configuration
+                          </button>
+                          <button
+                            onClick={() => setSelectedEmployeeForSalary(null)}
+                            className="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Salary Summary */}
+                    <div className="lg:col-span-1">
+                      <div className="p-6 bg-white rounded-xl border-2 border-gray-100 sticky top-8">
+                        <h3 className="text-lg font-bold mb-6 font-['Montserrat']">Salary Summary</h3>
+
+                        <div className="space-y-4">
+                          {/* Base Salary */}
+                          <div className="pb-4 border-b border-gray-200">
+                            <div className="flex justify-between mb-2">
+                              <span className="text-gray-600">Base Salary (Annual)</span>
+                              <span className="font-bold">${salaryConfig.baseSalary.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Per Month</span>
+                              <span className="font-semibold">${(salaryConfig.baseSalary / 12).toFixed(2)}</span>
+                            </div>
+                          </div>
+
+                          {/* Total Allowances */}
+                          <div className="pb-4 border-b border-gray-200">
+                            <div className="text-sm text-green-600 mb-2">Total Allowances (Annual)</div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span>Housing</span>
+                                <span>${salaryConfig.allowances.housing * 12}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Transport</span>
+                                <span>${salaryConfig.allowances.transport * 12}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Medical</span>
+                                <span>${salaryConfig.allowances.medical * 12}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Other</span>
+                                <span>${salaryConfig.allowances.other * 12}</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between mt-2 pt-2 border-t border-gray-200">
+                              <span className="font-semibold text-green-600">Total</span>
+                              <span className="font-bold text-green-600">
+                                ${((salaryConfig.allowances.housing + salaryConfig.allowances.transport + salaryConfig.allowances.medical + salaryConfig.allowances.other) * 12).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Total Deductions */}
+                          <div className="pb-4 border-b border-gray-200">
+                            <div className="text-sm text-red-600 mb-2">Total Deductions</div>
+                            <div className="space-y-1 text-sm">
+                              <div className="flex justify-between">
+                                <span>Tax ({salaryConfig.deductions.tax}%)</span>
+                                <span>${((salaryConfig.baseSalary * salaryConfig.deductions.tax) / 100).toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Pension ({salaryConfig.deductions.pension}%)</span>
+                                <span>${((salaryConfig.baseSalary * salaryConfig.deductions.pension) / 100).toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Insurance ({salaryConfig.deductions.insurance}%)</span>
+                                <span>${((salaryConfig.baseSalary * salaryConfig.deductions.insurance) / 100).toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Other ({salaryConfig.deductions.other}%)</span>
+                                <span>${((salaryConfig.baseSalary * salaryConfig.deductions.other) / 100).toFixed(2)}</span>
+                              </div>
+                            </div>
+                            <div className="flex justify-between mt-2 pt-2 border-t border-gray-200">
+                              <span className="font-semibold text-red-600">Total</span>
+                              <span className="font-bold text-red-600">
+                                -${((salaryConfig.baseSalary * (salaryConfig.deductions.tax + salaryConfig.deductions.pension + salaryConfig.deductions.insurance + salaryConfig.deductions.other)) / 100).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Net Salary */}
+                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg">
+                            <div className="text-sm text-gray-600 mb-1">Annual Net Salary</div>
+                            <div className="text-2xl font-bold text-green-700 mb-2">
+                              ${(
+                                salaryConfig.baseSalary +
+                                ((salaryConfig.allowances.housing + salaryConfig.allowances.transport + salaryConfig.allowances.medical + salaryConfig.allowances.other) * 12) -
+                                ((salaryConfig.baseSalary * (salaryConfig.deductions.tax + salaryConfig.deductions.pension + salaryConfig.deductions.insurance + salaryConfig.deductions.other)) / 100)
+                              ).toLocaleString()}
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-600">Monthly Net</span>
+                              <span className="font-bold text-green-700">
+                                ${(
+                                  (salaryConfig.baseSalary +
+                                  ((salaryConfig.allowances.housing + salaryConfig.allowances.transport + salaryConfig.allowances.medical + salaryConfig.allowances.other) * 12) -
+                                  ((salaryConfig.baseSalary * (salaryConfig.deductions.tax + salaryConfig.deductions.pension + salaryConfig.deductions.insurance + salaryConfig.deductions.other)) / 100)
+                                  ) / 12
+                                ).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

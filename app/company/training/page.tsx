@@ -9,10 +9,15 @@ import {
   Play,
   Clock,
   Users,
+  Star,
+  MessageSquare,
 } from 'lucide-react';
 
 export default function TrainingPage() {
-  const [activeTab, setActiveTab] = useState<'courses' | 'my-learning' | 'calendar'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'my-learning' | 'calendar' | 'feedback'>('courses');
+  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -100,6 +105,66 @@ export default function TrainingPage() {
     { id: 3, title: 'Team Building Activities', date: '2024-03-28', time: '9:00 AM', location: 'Conference Hall' },
   ];
 
+  const courseFeedbacks = [
+    {
+      id: 1,
+      courseId: 1,
+      courseName: 'Leadership Excellence Program',
+      employeeName: 'John Doe',
+      employeeAvatar: 'JD',
+      rating: 5,
+      comment: 'Excellent course! The instructor was very knowledgeable and the content was practical. Highly recommend for anyone in a leadership role.',
+      date: '2024-03-15',
+    },
+    {
+      id: 2,
+      courseId: 2,
+      courseName: 'Advanced HR Analytics',
+      employeeName: 'Sarah Smith',
+      employeeAvatar: 'SS',
+      rating: 4,
+      comment: 'Great introduction to HR analytics. The hands-on exercises were very helpful. Would have liked more advanced topics.',
+      date: '2024-03-12',
+    },
+    {
+      id: 3,
+      courseId: 1,
+      courseName: 'Leadership Excellence Program',
+      employeeName: 'Mike Johnson',
+      employeeAvatar: 'MJ',
+      rating: 5,
+      comment: 'Transformed my leadership style. The modules on conflict resolution were particularly valuable.',
+      date: '2024-03-10',
+    },
+  ];
+
+  const handleSubmitFeedback = () => {
+    if (selectedCourse && rating > 0) {
+      alert(`Feedback submitted! Rating: ${rating} stars`);
+      setSelectedCourse(null);
+      setRating(0);
+      setFeedback('');
+    }
+  };
+
+  const renderStars = (currentRating: number, interactive: boolean = false) => {
+    return (
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-5 h-5 ${
+              star <= currentRating
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'fill-gray-200 text-gray-200'
+            } ${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : ''}`}
+            onClick={() => interactive && setRating(star)}
+          />
+        ))}
+      </div>
+    );
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Available':
@@ -167,6 +232,14 @@ export default function TrainingPage() {
               }`}
             >
               Calendar
+            </button>
+            <button
+              onClick={() => setActiveTab('feedback')}
+              className={`px-6 py-3 font-semibold transition-all ${
+                activeTab === 'feedback' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+              }`}
+            >
+              Feedback & Ratings
             </button>
           </div>
         </div>
@@ -270,6 +343,131 @@ export default function TrainingPage() {
                     <div className="text-right">
                       <p className="text-sm font-medium">{session.location}</p>
                       <button className="text-sm text-black hover:underline mt-1">Join Session</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Feedback & Ratings */}
+        {activeTab === 'feedback' && (
+          <div className="training-item">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Submit Feedback */}
+              <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+                <h3 className="text-xl font-bold font-['Montserrat'] mb-6 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5" />
+                  Submit Feedback
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Select Completed Course</label>
+                    <select
+                      value={selectedCourse || ''}
+                      onChange={(e) => setSelectedCourse(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                    >
+                      <option value="">Choose a course...</option>
+                      <option value={1}>Leadership Excellence Program</option>
+                      <option value={2}>Advanced HR Analytics</option>
+                      <option value={3}>Employee Relations Masterclass</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Your Rating</label>
+                    <div className="flex items-center gap-2">
+                      {renderStars(rating, true)}
+                      <span className="ml-2 text-sm text-gray-600">
+                        {rating > 0 ? `${rating} star${rating > 1 ? 's' : ''}` : 'Select a rating'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">Your Feedback</label>
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      rows={5}
+                      placeholder="Share your experience with this course. What did you learn? How can it be improved?"
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black resize-none"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSubmitFeedback}
+                    disabled={!selectedCourse || rating === 0}
+                    className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Submit Feedback
+                  </button>
+                </div>
+              </div>
+
+              {/* Course Feedback Summary */}
+              <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
+                <h3 className="text-xl font-bold font-['Montserrat'] mb-6 flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Course Ratings Summary
+                </h3>
+                <div className="space-y-4">
+                  {availableCourses.map((course) => {
+                    const courseFeedback = courseFeedbacks.filter(f => f.courseId === course.id);
+                    const avgRating = courseFeedback.length > 0
+                      ? (courseFeedback.reduce((sum, f) => sum + f.rating, 0) / courseFeedback.length).toFixed(1)
+                      : 'N/A';
+
+                    return (
+                      <div key={course.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-sm">{course.title}</h4>
+                            <p className="text-xs text-gray-500">{courseFeedback.length} reviews</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-yellow-500">{avgRating}</div>
+                            {avgRating !== 'N/A' && renderStars(Number(avgRating))}
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                          <div
+                            className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${(Number(avgRating) / 5) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Feedback List */}
+            <div className="mt-8 p-6 bg-white rounded-xl border-2 border-gray-100">
+              <h3 className="text-xl font-bold font-['Montserrat'] mb-6">Recent Feedback</h3>
+              <div className="space-y-4">
+                {courseFeedbacks.map((item) => (
+                  <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white font-bold">
+                        {item.employeeAvatar}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold">{item.employeeName}</h4>
+                            <p className="text-sm text-gray-600">{item.courseName}</p>
+                          </div>
+                          <div className="text-right">
+                            {renderStars(item.rating)}
+                            <p className="text-xs text-gray-500 mt-1">{item.date}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-700">"{item.comment}"</p>
+                      </div>
                     </div>
                   </div>
                 ))}
