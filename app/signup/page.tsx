@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import gsap from 'gsap';
 import Link from 'next/link';
 
 interface RoleConfig {
@@ -14,34 +13,22 @@ interface RoleConfig {
 
 const roles: RoleConfig[] = [
   {
-    id: 'admin',
-    name: 'Administrator',
-    description: 'Full system access and control',
-    fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'adminKey'],
-  },
-  {
-    id: 'hr_manager',
-    name: 'HR Manager',
-    description: 'Manage employees, payroll, and HR operations',
+    id: 'company_admin',
+    name: 'Company Admin',
+    description: 'Manage HR operations, payroll, attendance, and generate reports within your organization',
     fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department'],
   },
   {
     id: 'manager',
     name: 'Manager',
-    description: 'Team lead with approval permissions',
+    description: 'Oversee team members, approve leave requests, and conduct performance evaluations',
     fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department', 'teamSize'],
   },
   {
     id: 'employee',
     name: 'Employee',
-    description: 'Standard employee access',
+    description: 'Access self-service portal to view profile, mark attendance, apply for leave, and track performance',
     fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department', 'manager'],
-  },
-  {
-    id: 'candidate',
-    name: 'Job Candidate',
-    description: 'Applying for open positions',
-    fields: ['firstName', 'lastName', 'email', 'phone', 'position', 'experience', 'resume'],
   },
 ];
 
@@ -57,19 +44,11 @@ export default function SignupPage() {
     phone: '',
     company: '',
 
-    // Employee/HR specific
+    // Role specific
     employeeId: '',
     department: '',
     manager: '',
     teamSize: '',
-
-    // Admin specific
-    adminKey: '',
-
-    // Candidate specific
-    position: '',
-    experience: '',
-    resume: null as File | null,
 
     // Common
     password: '',
@@ -77,16 +56,7 @@ export default function SignupPage() {
     agreeToTerms: false,
   });
 
-  useEffect(() => {
-    if (formRef.current) {
-      gsap.from('.signup-form', {
-        opacity: 0,
-        y: 30,
-        duration: 0.8,
-        ease: 'power3.out',
-      });
-    }
-  }, [selectedRole]);
+
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,22 +191,20 @@ export default function SignupPage() {
                         />
                       </div>
 
-                      {/* Company - All except candidates */}
-                      {selectedRole !== 'candidate' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Company Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.company}
-                            onChange={(e) => handleInputChange('company', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Your Company"
-                            required
-                          />
-                        </div>
-                      )}
+                      {/* Company Name - All roles */}
+                      <div>
+                        <label className="block text-sm font-semibold mb-2">
+                          Company Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.company}
+                          onChange={(e) => handleInputChange('company', e.target.value)}
+                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
+                          placeholder="Your Company"
+                          required
+                        />
+                      </div>
 
                       {/* Phone - All roles */}
                       <div>
@@ -253,8 +221,8 @@ export default function SignupPage() {
                         />
                       </div>
 
-                      {/* Employee ID - HR Manager, Manager, Employee */}
-                      {(selectedRole === 'hr_manager' || selectedRole === 'manager' || selectedRole === 'employee') && (
+                      {/* Employee ID - All roles */}
+                      {(selectedRole === 'company_admin' || selectedRole === 'manager' || selectedRole === 'employee') && (
                         <div>
                           <label className="block text-sm font-semibold mb-2">
                             Employee ID *
@@ -270,8 +238,8 @@ export default function SignupPage() {
                         </div>
                       )}
 
-                      {/* Department - HR Manager, Manager, Employee */}
-                      {(selectedRole === 'hr_manager' || selectedRole === 'manager' || selectedRole === 'employee') && (
+                      {/* Department - All roles */}
+                      {(selectedRole === 'company_admin' || selectedRole === 'manager' || selectedRole === 'employee') && (
                         <div>
                           <label className="block text-sm font-semibold mb-2">
                             Department *
@@ -327,82 +295,20 @@ export default function SignupPage() {
                         </div>
                       )}
 
-                      {/* Position - Candidate only */}
-                      {selectedRole === 'candidate' && (
+                      {/* Manager - Employee only */}
+                      {selectedRole === 'employee' && (
                         <div>
                           <label className="block text-sm font-semibold mb-2">
-                            Position Applying For *
-                          </label>
-                          <select
-                            value={formData.position}
-                            onChange={(e) => handleInputChange('position', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            required
-                          >
-                            <option value="">Select Position</option>
-                            <option value="software-engineer">Software Engineer</option>
-                            <option value="hr-manager">HR Manager</option>
-                            <option value="marketing-manager">Marketing Manager</option>
-                            <option value="finance-analyst">Finance Analyst</option>
-                            <option value="sales-representative">Sales Representative</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Experience - Candidate only */}
-                      {selectedRole === 'candidate' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Years of Experience *
-                          </label>
-                          <select
-                            value={formData.experience}
-                            onChange={(e) => handleInputChange('experience', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            required
-                          >
-                            <option value="">Select Experience</option>
-                            <option value="0-1">0-1 years</option>
-                            <option value="1-3">1-3 years</option>
-                            <option value="3-5">3-5 years</option>
-                            <option value="5-10">5-10 years</option>
-                            <option value="10+">10+ years</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Resume - Candidate only */}
-                      {selectedRole === 'candidate' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Resume/CV *
-                          </label>
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => handleInputChange('resume', e.target.files?.[0])}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX (Max 5MB)</p>
-                        </div>
-                      )}
-
-                      {/* Admin Key - Admin only */}
-                      {selectedRole === 'admin' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Admin Registration Key *
+                            Manager Name *
                           </label>
                           <input
                             type="text"
-                            value={formData.adminKey}
-                            onChange={(e) => handleInputChange('adminKey', e.target.value)}
+                            value={formData.manager}
+                            onChange={(e) => handleInputChange('manager', e.target.value)}
                             className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Enter admin registration key"
+                            placeholder="Your manager's name"
                             required
                           />
-                          <p className="text-xs text-gray-500 mt-1">Contact your system administrator for the registration key</p>
                         </div>
                       )}
 

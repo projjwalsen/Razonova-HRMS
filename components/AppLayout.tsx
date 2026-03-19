@@ -24,15 +24,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/attendance', label: 'Attendance', icon: Clock },
-    { href: '/leave', label: 'Leave', icon: CalendarCheck },
+    { href: '/company', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/company/attendance', label: 'Attendance', icon: Clock },
+    { href: '/company/leave', label: 'Leave', icon: CalendarCheck },
     { href: '/employees', label: 'Employees', icon: Users },
     { href: '/payroll', label: 'Payroll', icon: DollarSign },
     { href: '/recruitment', label: 'Recruitment', icon: Briefcase },
     { href: '/performance', label: 'Performance', icon: TrendingUp },
     { href: '/training', label: 'Training', icon: GraduationCap },
-    { href: '/reports', label: 'Reports', icon: BarChart3 },
+    { href: '/company/reports', label: 'Reports', icon: BarChart3 },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -42,7 +42,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Sidebar */}
         <aside className="w-64 bg-black text-white min-h-screen fixed left-0 top-0">
           <div className="p-6">
-            <Link href="/admin" className="flex items-center gap-3 mb-8">
+            <Link href="/company" className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-xl font-['Montserrat']">H</span>
               </div>

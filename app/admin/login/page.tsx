@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Footer from '@/components/Footer';
+
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -92,28 +93,10 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-gray-600">
-                  Don't have an account?{' '}
-                  <Link href="/signup" className="font-semibold text-black hover:underline">
-                    Sign up
-                  </Link>
-                </p>
-              </div>
+              
             </div>
 
-            {/* Additional Help */}
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-500 mb-4">
-                Having trouble signing in?
-              </p>
-              <Link
-                href="/contact"
-                className="text-sm font-semibold text-black hover:underline"
-              >
-                Contact Support
-              </Link>
-            </div>
+            
           </div>
         </div>
       </main>

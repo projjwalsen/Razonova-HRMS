@@ -21,28 +21,28 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   // Check if we're in super-admin
-  const isSuperAdmin = pathname?.startsWith('/super-admin');
+  const isSuperAdmin = pathname?.startsWith('/admin');
 
   const adminNavItems = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/employees', label: 'Employees', icon: Users },
-    { href: '/admin/departments', label: 'Departments', icon: Building },
-    { href: '/admin/payroll', label: 'Payroll', icon: DollarSign },
-    { href: '/admin/recruitment', label: 'Recruitment', icon: Briefcase },
-    { href: '/admin/performance', label: 'Performance', icon: TrendingUp },
-    { href: '/admin/training', label: 'Training', icon: GraduationCap },
-    { href: '/admin/settings', label: 'Settings', icon: Settings },
-    { href: '/attendance', label: 'Attendance', icon: Clock },
-    { href: '/leave', label: 'Leave', icon: CalendarCheck },
-    { href: '/reports', label: 'Reports', icon: BarChart3 },
+    { href: '/company', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/company/employees', label: 'Employees', icon: Users },
+    { href: '/company/departments', label: 'Departments', icon: Building },
+    { href: '/company/payroll', label: 'Payroll', icon: DollarSign },
+    { href: '/company/recruitment', label: 'Recruitment', icon: Briefcase },
+    { href: '/company/performance', label: 'Performance', icon: TrendingUp },
+    { href: '/company/training', label: 'Training', icon: GraduationCap },
+    { href: '/company/settings', label: 'Settings', icon: Settings },
+    { href: '/company/attendance', label: 'Attendance', icon: Clock },
+    { href: '/company/leave', label: 'Leave', icon: CalendarCheck },
+    { href: '/company/reports', label: 'Reports', icon: BarChart3 },
   ];
 
   const superAdminNavItems = [
-    { href: '/super-admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/super-admin/companies', label: 'Companies', icon: Building },
-    { href: '/super-admin/users', label: 'All Users', icon: Users },
-    { href: '/super-admin/analytics', label: 'Analytics', icon: BarChart3 },
-    { href: '/super-admin/settings', label: 'System Settings', icon: Shield },
+    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/companies', label: 'Companies', icon: Building },
+    { href: '/admin/users', label: 'All Users', icon: Users },
+    { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/admin/settings', label: 'System Settings', icon: Shield },
   ];
 
   const navItems = isSuperAdmin ? superAdminNavItems : adminNavItems;
@@ -57,7 +57,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-black text-white min-h-screen fixed left-0 top-0 z-50">
       <div className="p-6">
-        <Link href={isSuperAdmin ? "/super-admin" : "/admin"} className="flex items-center gap-3 mb-8">
+        <Link href={isSuperAdmin ? "/admin" : "/company"} className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
             <span className="text-black font-bold text-xl font-['Montserrat']">H</span>
           </div>

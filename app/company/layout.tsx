@@ -1,9 +1,9 @@
 
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
-import "./globals.css";
+import "@/app/globals.css";
 import ClientFix from "@/components/ClientFix";
-
+import MainLayout from "@/components/MainLayout";
 
 
 const montserrat = Montserrat({
@@ -36,9 +36,9 @@ export default function RootLayout({
 
       >
       <ClientFix/>
-      
+      <MainLayout>
         {children}
-     
+      </MainLayout>
       </body>
     </html>
   );
