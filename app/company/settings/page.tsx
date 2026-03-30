@@ -212,7 +212,7 @@ export default function SettingsPage() {
             <button
               onClick={() => setActiveTab('profile')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'profile' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'profile' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               My Profile
@@ -220,7 +220,7 @@ export default function SettingsPage() {
             <button
               onClick={() => setActiveTab('company')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'company' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'company' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Company Settings
@@ -228,7 +228,7 @@ export default function SettingsPage() {
             <button
               onClick={() => setActiveTab('roles')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'roles' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'roles' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Roles & Permissions
@@ -236,7 +236,7 @@ export default function SettingsPage() {
             <button
               onClick={() => setActiveTab('notifications')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'notifications' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'notifications' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               
@@ -245,7 +245,7 @@ export default function SettingsPage() {
             <button
               onClick={() => setActiveTab('leave')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'leave' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'leave' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
              
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                 <h2 className="text-2xl font-bold font-['Montserrat']">Profile Information</h2>
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800"
+                  className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800"
                 >
                   {isEditing ? 'Cancel' : 'Edit Profile'}
                 </button>
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                 {/* Profile Card */}
                 <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
                   <div className="text-center">
-                    <div className="w-24 h-24 bg-black rounded-full flex items-center justify-center text-white text-3xl font-bold font-['Montserrat'] mx-auto mb-4">
+                    <div className="w-24 h-24 bg-[#0445AD] rounded-full flex items-center justify-center text-white text-3xl font-bold font-['Montserrat'] mx-auto mb-4">
                       {profile.firstName[0]}{profile.lastName[0]}
                     </div>
                     <h3 className="text-xl font-bold font-['Montserrat']">
@@ -370,7 +370,7 @@ export default function SettingsPage() {
                     {isEditing && (
                       <button
                         type="submit"
-                        className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800"
+                        className="w-full px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800"
                       >
                         Save Changes
                       </button>
@@ -393,7 +393,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-semibold mb-2">Confirm New Password</label>
                         <input type="password" className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black" />
                       </div>
-                      <button type="submit" className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                      <button type="submit" className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                         Update Password
                       </button>
                     </form>
@@ -521,7 +521,7 @@ export default function SettingsPage() {
 
                   <button
                     type="submit"
-                    className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800"
+                    className="w-full px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800"
                   >
                     Save Settings
                   </button>
@@ -536,7 +536,7 @@ export default function SettingsPage() {
           <div className="settings-item">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold font-['Montserrat']">Roles & Permissions</h2>
-              <button className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+              <button className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                 + Add Role
               </button>
             </div>
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                 <div key={role.id} className="p-6 bg-white rounded-xl border-2 border-gray-100">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold font-['Montserrat']">{role.name}</h3>
-                    <button className="text-sm font-semibold text-black hover:underline">Edit</button>
+                    <button className="text-sm font-semibold text-[#0445AD] hover:underline">Edit</button>
                   </div>
                   <p className="text-gray-600 mb-4">{role.description}</p>
                   <div className="mb-4">
@@ -574,7 +574,7 @@ export default function SettingsPage() {
             <div className="max-w-4xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold font-['Montserrat']">Notification Settings</h2>
-                <button className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                <button className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                   Save Changes
                 </button>
               </div>
@@ -594,7 +594,7 @@ export default function SettingsPage() {
                         </span>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" defaultChecked={value} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0445AD]" />
                         </label>
                       </div>
                     ))}
@@ -615,7 +615,7 @@ export default function SettingsPage() {
                         </span>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" defaultChecked={value} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0445AD]" />
                         </label>
                       </div>
                     ))}
@@ -636,7 +636,7 @@ export default function SettingsPage() {
                         </span>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" defaultChecked={value} className="sr-only peer" />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black" />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0445AD]" />
                         </label>
                       </div>
                     ))}
@@ -655,7 +655,7 @@ export default function SettingsPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => alert('Leave settings saved successfully!')}
-                  className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center gap-2"
+                  className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center gap-2"
                 >
                   <Save className="w-5 h-5" />
                   Save Changes
@@ -673,7 +673,7 @@ export default function SettingsPage() {
                   </h3>
                   <button
                     onClick={handleAddLeaveType}
-                    className="px-3 py-1 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800"
+                    className="px-3 py-1 bg-[#0445AD] text-white rounded-lg text-sm font-semibold hover:bg-gray-800"
                   >
                     + Add
                   </button>
@@ -702,7 +702,7 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Approval:</span>
-                          <span className={`font-semibold ${leaveType.requiresApproval ? 'text-black' : 'text-gray-400'}`}>
+                          <span className={`font-semibold ${leaveType.requiresApproval ? 'text-[#0445AD]' : 'text-gray-400'}`}>
                             {leaveType.requiresApproval ? 'Yes' : 'No'}
                           </span>
                         </div>
@@ -710,7 +710,7 @@ export default function SettingsPage() {
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditLeaveType(leaveType)}
-                          className="flex-1 px-2 py-1 bg-black text-white rounded text-xs font-semibold hover:bg-gray-800"
+                          className="flex-1 px-2 py-1 bg-[#0445AD] text-white rounded text-xs font-semibold hover:bg-gray-800"
                         >
                           Edit
                         </button>
@@ -772,7 +772,7 @@ export default function SettingsPage() {
                         accrualSettings: { ...leaveSettings.accrualSettings, prorated: !leaveSettings.accrualSettings.prorated }
                       })}
                       className={`w-12 h-6 rounded-full transition-colors ${
-                        leaveSettings.accrualSettings.prorated ? 'bg-black' : 'bg-gray-300'
+                        leaveSettings.accrualSettings.prorated ? 'bg-[#0445AD]' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -798,7 +798,7 @@ export default function SettingsPage() {
                         workflowSettings: { ...leaveSettings.workflowSettings, requiresManagerApproval: !leaveSettings.workflowSettings.requiresManagerApproval }
                       })}
                       className={`w-12 h-6 rounded-full transition-colors ${
-                        leaveSettings.workflowSettings.requiresManagerApproval ? 'bg-black' : 'bg-gray-300'
+                        leaveSettings.workflowSettings.requiresManagerApproval ? 'bg-[#0445AD]' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -817,7 +817,7 @@ export default function SettingsPage() {
                         workflowSettings: { ...leaveSettings.workflowSettings, requiresHRApproval: !leaveSettings.workflowSettings.requiresHRApproval }
                       })}
                       className={`w-12 h-6 rounded-full transition-colors ${
-                        leaveSettings.workflowSettings.requiresHRApproval ? 'bg-black' : 'bg-gray-300'
+                        leaveSettings.workflowSettings.requiresHRApproval ? 'bg-[#0445AD]' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -860,7 +860,7 @@ export default function SettingsPage() {
                         carryForwardSettings: { ...leaveSettings.carryForwardSettings, enabled: !leaveSettings.carryForwardSettings.enabled }
                       })}
                       className={`w-12 h-6 rounded-full transition-colors ${
-                        leaveSettings.carryForwardSettings.enabled ? 'bg-black' : 'bg-gray-300'
+                        leaveSettings.carryForwardSettings.enabled ? 'bg-[#0445AD]' : 'bg-gray-300'
                       }`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -931,7 +931,7 @@ export default function SettingsPage() {
 
             {/* Leave Type Form Modal */}
             {showLeaveTypeForm && editingLeaveType && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 bg-[#0445AD]/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-xl border-2 border-gray-100 p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
                   <h3 className="text-xl font-bold font-['Montserrat'] mb-6">
                     {editingLeaveType.isNew ? 'Add New Leave Type' : 'Edit Leave Type'}
@@ -978,7 +978,7 @@ export default function SettingsPage() {
                         <button
                           onClick={() => setEditingLeaveType({ ...editingLeaveType, requiresApproval: !editingLeaveType.requiresApproval })}
                           className={`w-12 h-6 rounded-full transition-colors ${
-                            editingLeaveType.requiresApproval ? 'bg-black' : 'bg-gray-300'
+                            editingLeaveType.requiresApproval ? 'bg-[#0445AD]' : 'bg-gray-300'
                           }`}
                         >
                           <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -994,7 +994,7 @@ export default function SettingsPage() {
                         <button
                           onClick={() => setEditingLeaveType({ ...editingLeaveType, requiresDocument: !editingLeaveType.requiresDocument })}
                           className={`w-12 h-6 rounded-full transition-colors ${
-                            editingLeaveType.requiresDocument ? 'bg-black' : 'bg-gray-300'
+                            editingLeaveType.requiresDocument ? 'bg-[#0445AD]' : 'bg-gray-300'
                           }`}
                         >
                           <div className={`w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform ${
@@ -1013,7 +1013,7 @@ export default function SettingsPage() {
                       <button
                         onClick={handleSaveLeaveType}
                         disabled={!editingLeaveType.name.trim()}
-                        className="flex-1 px-4 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {editingLeaveType.isNew ? 'Add Leave Type' : 'Save Changes'}
                       </button>

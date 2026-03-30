@@ -48,7 +48,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-black text-white">
+    <footer className="bg-[#0445AD] text-white">
       {/* Main Footer */}
       <div className="section-padding">
         <div className="container-custom">
@@ -57,7 +57,7 @@ const Footer = () => {
             <div className="lg:col-span-2">
               <Link href="/" className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-black font-bold text-xl font-['Montserrat']">H</span>
+                  <span className="text-[#0445AD] font-bold text-xl font-['Montserrat']">H</span>
                 </div>
                 <span className="text-2xl font-bold font-['Montserrat'] tracking-tight">
                   HRMS

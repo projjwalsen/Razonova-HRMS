@@ -103,19 +103,19 @@ const Hero = ({
       )}
 
       {/* Decorative Elements */}
-      <div className="absolute top-20 right-20 w-96 h-96 bg-black/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-20 left-20 w-80 h-80 bg-black/5 rounded-full blur-3xl" />
+      <div className="absolute top-20 right-20 w-96 h-96 bg-[#0445AD]/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 left-20 w-80 h-80 bg-[#0445AD]/5 rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
         <div className={`max-w-4xl ${alignmentClasses[variant]}`}>
           {/* Subtitle */}
-          <p className="hero-subtitle text-sm font-semibold text-black mb-4 tracking-widest uppercase">
+          <p className="hero-subtitle text-sm font-semibold text-[#0445AD] mb-4 tracking-widest uppercase">
             {subtitle}
           </p>
 
           {/* Title */}
           <h1
-            className="hero-title text-5xl md:text-6xl lg:text-7xl font-bold text-black mb-6 font-['Montserrat'] leading-tight"
+            className="hero-title text-5xl md:text-6xl lg:text-7xl font-bold text-[#0445AD] mb-6 font-['Montserrat'] leading-tight"
           >
             {title}
           </h1>
@@ -132,7 +132,7 @@ const Hero = ({
             {primaryCTA && (
               <Link
                 href={primaryCTA.href}
-                className="px-8 py-4 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+                className="px-8 py-4 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
               >
                 {primaryCTA.label}
               </Link>
@@ -140,7 +140,7 @@ const Hero = ({
             {secondaryCTA && (
               <Link
                 href={secondaryCTA.href}
-                className="px-8 py-4 bg-transparent text-black border-2 border-black rounded-lg font-semibold hover:bg-black hover:text-white transition-all duration-300"
+                className="px-8 py-4 bg-transparent text-[#0445AD] border-2 border-black rounded-lg font-semibold hover:bg-[#0445AD] hover:text-white transition-all duration-300"
               >
                 {secondaryCTA.label}
               </Link>
@@ -152,7 +152,7 @@ const Hero = ({
       {/* Scroll Indicator */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
         <div className="w-6 h-10 border-2 border-black rounded-full flex justify-center pt-2">
-          <div className="w-1 h-2 bg-black rounded-full animate-pulse" />
+          <div className="w-1 h-2 bg-[#0445AD] rounded-full animate-pulse" />
         </div>
       </div>
     </section>

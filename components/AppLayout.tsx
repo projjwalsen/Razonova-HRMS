@@ -40,11 +40,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-black text-white min-h-screen fixed left-0 top-0">
+        <aside className="w-64 bg-[#0445AD] text-white min-h-screen fixed left-0 top-0">
           <div className="p-6">
             <Link href="/company" className="flex items-center gap-3 mb-8">
               <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-xl font-['Montserrat']">H</span>
+                <span className="text-[#0445AD] font-bold text-xl font-['Montserrat']">H</span>
               </div>
               <span className="text-xl font-bold font-['Montserrat']">HRMS</span>
             </Link>

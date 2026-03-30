@@ -3,6 +3,11 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 export interface Department {
   id: string;
   name: string;
+  head?: string;
+  employeeCount?: number;
+  budget?: string;
+  location?: string;
+  description?: string;
   tenantId?: string;
   createdAt?: string;
   updatedAt?: string;

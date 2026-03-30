@@ -27,10 +27,10 @@ export default function Tooltip({ children, content, position = 'top' }: Tooltip
       {children}
       {isVisible && (
         <div
-          className={`absolute ${positionClasses[position]} z-50 px-3 py-2 bg-black text-white text-sm rounded-lg whitespace-nowrap shadow-lg animate-in fade-in slide-in-from-top-1 duration-200`}
+          className={`absolute ${positionClasses[position]} z-50 px-3 py-2 bg-[#0445AD] text-white text-sm rounded-lg whitespace-nowrap shadow-lg animate-in fade-in slide-in-from-top-1 duration-200`}
         >
           {content}
-          <div className="absolute w-2 h-2 bg-black transform rotate-45" />
+          <div className="absolute w-2 h-2 bg-[#0445AD] transform rotate-45" />
         </div>
       )}
     </div>

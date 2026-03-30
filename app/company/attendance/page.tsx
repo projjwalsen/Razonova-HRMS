@@ -168,7 +168,7 @@ export default function AttendancePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-4">
-                  <Clock className="w-8 h-8 text-black" />
+                  <Clock className="w-8 h-8 text-[#0445AD]" />
                 </div>
                 <div className="text-5xl font-bold font-['Montserrat'] mb-2">
                   {currentDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -231,8 +231,8 @@ export default function AttendancePage() {
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'today'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Today's Attendance
@@ -241,8 +241,8 @@ export default function AttendancePage() {
               onClick={() => setActiveTab('history')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'history'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               My History
@@ -251,8 +251,8 @@ export default function AttendancePage() {
               onClick={() => setActiveTab('calendar')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'calendar'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Calendar View
@@ -261,8 +261,8 @@ export default function AttendancePage() {
               onClick={() => setActiveTab('requests')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'requests'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Regularization Requests
@@ -425,7 +425,7 @@ export default function AttendancePage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <button className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center justify-center gap-2">
+                  <button className="w-full px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center justify-center gap-2">
                     <Filter className="w-4 h-4" />
                     Apply Filters
                   </button>
@@ -472,7 +472,7 @@ export default function AttendancePage() {
           <div className="attendance-item">
             <div className="mb-4 flex justify-between items-center">
               <h2 className="text-xl font-bold font-['Montserrat']">Regularization Requests</h2>
-              <button className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center gap-2">
+              <button className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 New Request
               </button>

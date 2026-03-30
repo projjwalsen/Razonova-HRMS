@@ -180,7 +180,7 @@ export default function RecruitmentPage() {
           </div>
           <button
             onClick={() => setShowJobForm(true)}
-            className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800"
+            className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800"
           >
             + Post New Job
           </button>
@@ -207,7 +207,7 @@ export default function RecruitmentPage() {
                 <h2 className="text-2xl font-bold font-['Montserrat']">Post New Job</h2>
                 <button
                   onClick={() => setShowJobForm(false)}
-                  className="text-gray-600 hover:text-black"
+                  className="text-gray-600 hover:text-[#0445AD]"
                 >
                   ✕
                 </button>
@@ -301,7 +301,7 @@ export default function RecruitmentPage() {
                   <textarea rows={6} className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black resize-none" required />
                 </div>
                 <div className="flex gap-4">
-                  <button type="submit" className="px-8 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                  <button type="submit" className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                     Post Job
                   </button>
                   <button
@@ -323,7 +323,7 @@ export default function RecruitmentPage() {
             <button
               onClick={() => setActiveTab('jobs')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'jobs' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'jobs' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Job Postings
@@ -331,7 +331,7 @@ export default function RecruitmentPage() {
             <button
               onClick={() => setActiveTab('candidates')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'candidates' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'candidates' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Candidates
@@ -339,7 +339,7 @@ export default function RecruitmentPage() {
             <button
               onClick={() => setActiveTab('interviews')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'interviews' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'interviews' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Interviews
@@ -368,7 +368,7 @@ export default function RecruitmentPage() {
                       <p className="text-sm text-gray-500">Posted on {job.posted} • {job.applicants} applicants</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">
+                      <button className="px-4 py-2 bg-[#0445AD] text-white rounded-lg text-sm font-semibold hover:bg-gray-800">
                         View Applicants
                       </button>
                       <button className="px-4 py-2 border-2 border-gray-200 rounded-lg text-sm font-semibold hover:border-black">

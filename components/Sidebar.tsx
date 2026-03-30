@@ -24,14 +24,14 @@ export default function Sidebar() {
   const isSuperAdmin = pathname?.startsWith('/admin');
 
   const adminNavItems = [
-    { href: '/company', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/company/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/company/employees', label: 'Employees', icon: Users },
     { href: '/company/departments', label: 'Departments', icon: Building },
     { href: '/company/payroll', label: 'Payroll', icon: DollarSign },
     { href: '/company/recruitment', label: 'Recruitment', icon: Briefcase },
     { href: '/company/performance', label: 'Performance', icon: TrendingUp },
     { href: '/company/training', label: 'Training', icon: GraduationCap },
-    { href: '/company/settings', label: 'Settings', icon: Settings },
+    { href: '/organization', label: 'Settings', icon: Settings },
     { href: '/company/attendance', label: 'Attendance', icon: Clock },
     { href: '/company/leave', label: 'Leave', icon: CalendarCheck },
     { href: '/company/reports', label: 'Reports', icon: BarChart3 },

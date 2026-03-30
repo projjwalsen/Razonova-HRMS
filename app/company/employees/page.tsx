@@ -243,7 +243,7 @@ export default function EmployeesPage() {
                   setShowAddForm(true);
                   setEditingEmployee(null);
                 }}
-                className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
+                className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
               >
                 + Add Employee
               </button>
@@ -420,7 +420,7 @@ export default function EmployeesPage() {
                     <div className="flex gap-4">
                       <button
                         type="submit"
-                        className="px-8 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
+                        className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
                       >
                         {editingEmployee ? 'Update Employee' : 'Add Employee'}
                       </button>
@@ -447,8 +447,8 @@ export default function EmployeesPage() {
                   onClick={() => setActiveTab('list')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'list'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   Employee List
@@ -457,23 +457,23 @@ export default function EmployeesPage() {
                   onClick={() => setActiveTab('salary')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'salary'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   <DollarSign className="w-4 h-4 inline mr-1" />
                   Salary Setup
                 </button>
-                <button
+                {/* <button
                   onClick={() => setActiveTab('departments')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'departments'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   Departments
-                </button>
+                </button> */}
               </div>
             </div>
 
@@ -536,7 +536,7 @@ export default function EmployeesPage() {
                           <tr key={employee.id} className="border-b border-gray-100">
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                <div className="w-10 h-10 bg-[#0445AD] rounded-full flex items-center justify-center text-white text-sm font-bold">
                                   {employee.firstName[0]}{employee.lastName[0]}
                                 </div>
                                 <div>
@@ -623,7 +623,7 @@ export default function EmployeesPage() {
                           className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200 hover:border-black cursor-pointer transition-all"
                         >
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            <div className="w-10 h-10 bg-[#0445AD] rounded-full flex items-center justify-center text-white text-sm font-bold">
                               {employee.firstName[0]}{employee.lastName[0]}
                             </div>
                             <div>
@@ -657,7 +657,7 @@ export default function EmployeesPage() {
                           </div>
                           <button
                             onClick={() => setSelectedEmployeeForSalary(null)}
-                            className="text-gray-400 hover:text-black"
+                            className="text-gray-400 hover:text-[#0445AD]"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -838,7 +838,7 @@ export default function EmployeesPage() {
                         </div>
 
                         <div className="flex gap-4">
-                          <button className="px-8 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                          <button className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                             Save Salary Configuration
                           </button>
                           <button
@@ -965,7 +965,7 @@ export default function EmployeesPage() {
                     <div key={index} className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-bold font-['Montserrat']">{dept.name}</h3>
-                        <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center text-white">
+                        <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center text-white">
                           <Building className="w-6 h-6" />
                         </div>
                       </div>

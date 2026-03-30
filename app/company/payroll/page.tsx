@@ -170,7 +170,7 @@ export default function PayrollPage() {
                 return (
                   <div key={index} className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
                         <Icon className="w-6 h-6 text-white" />
                       </div>
                       <span className="text-sm font-semibold text-gray-600">{item.change}</span>
@@ -189,8 +189,8 @@ export default function PayrollPage() {
                   onClick={() => setActiveTab('overview')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'overview'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   My Payslips
@@ -199,8 +199,8 @@ export default function PayrollPage() {
                   onClick={() => setActiveTab('generate')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'generate'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   Generate Payroll
@@ -209,8 +209,8 @@ export default function PayrollPage() {
                   onClick={() => setActiveTab('tax')}
                   className={`px-6 py-3 font-semibold transition-all duration-300 ${
                     activeTab === 'tax'
-                      ? 'text-black border-b-2 border-black'
-                      : 'text-gray-500 hover:text-black'
+                      ? 'text-[#0445AD] border-b-2 border-black'
+                      : 'text-gray-500 hover:text-[#0445AD]'
                   }`}
                 >
                   Tax Information
@@ -295,7 +295,7 @@ export default function PayrollPage() {
                       />
                       <button
                         onClick={handleProcessPayroll}
-                        className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
+                        className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
                       >
                         Process Payroll
                       </button>
@@ -418,7 +418,7 @@ export default function PayrollPage() {
                             <p className="text-sm text-gray-500">Tax deduction statement</p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all duration-300">
+                        <button className="px-4 py-2 bg-[#0445AD] text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all duration-300">
                           Download
                         </button>
                       </div>
@@ -430,7 +430,7 @@ export default function PayrollPage() {
                             <p className="text-sm text-gray-500">Tax deduction statement</p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all duration-300">
+                        <button className="px-4 py-2 bg-[#0445AD] text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all duration-300">
                           Download
                         </button>
                       </div>

@@ -120,11 +120,11 @@ export default function ReportsPage() {
                 onClick={() => setActiveTab(type.id as any)}
                 className={`p-6 rounded-xl border-2 transition-all duration-300 text-left ${
                   activeTab === type.id
-                    ? 'bg-black text-white border-black'
+                    ? 'bg-[#0445AD] text-white border-black'
                     : 'bg-white text-gray-900 border-gray-100 hover:border-black'
                 }`}
               >
-                <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center mb-4">
                   <Icon className={`w-6 h-6 ${activeTab === type.id ? 'text-white' : 'text-white'}`} />
                 </div>
                 <h3 className="text-lg font-bold mb-1 font-['Montserrat']">{type.name}</h3>
@@ -156,7 +156,7 @@ export default function ReportsPage() {
             <div className="flex gap-3">
               <button
                 onClick={handleGenerateReport}
-                className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800"
+                className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800"
               >
                 Generate Report
               </button>
@@ -202,7 +202,7 @@ export default function ReportsPage() {
                         <span className="text-gray-600">{dept.present}/{dept.total} ({dept.percentage}%)</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-black h-2 rounded-full" style={{ width: `${dept.percentage}%` }} />
+                        <div className="bg-[#0445AD] h-2 rounded-full" style={{ width: `${dept.percentage}%` }} />
                       </div>
                     </div>
                   ))}
@@ -217,7 +217,7 @@ export default function ReportsPage() {
                       <span className="font-medium">{week}</span>
                       <div className="flex items-center gap-4">
                         <div className="w-48 bg-gray-200 rounded-full h-2">
-                          <div className="bg-black h-2 rounded-full" style={{ width: `${90 + index * 2}%` }} />
+                          <div className="bg-[#0445AD] h-2 rounded-full" style={{ width: `${90 + index * 2}%` }} />
                         </div>
                         <span className="text-sm text-gray-600">{90 + index * 2}%</span>
                       </div>
@@ -254,7 +254,7 @@ export default function ReportsPage() {
                       <span className="text-gray-600">${dept.amount.toLocaleString()} ({dept.percentage}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-black h-2 rounded-full" style={{ width: `${dept.percentage}%` }} />
+                      <div className="bg-[#0445AD] h-2 rounded-full" style={{ width: `${dept.percentage}%` }} />
                     </div>
                   </div>
                 ))}
@@ -302,7 +302,7 @@ export default function ReportsPage() {
                           <div className="flex items-center gap-2">
                             <div className="w-32 bg-gray-200 rounded-full h-2">
                               <div
-                                className="bg-black h-2 rounded-full"
+                                className="bg-[#0445AD] h-2 rounded-full"
                                 style={{ width: `${(item.used / (item.used + item.balance)) * 100}%` }}
                               />
                             </div>
@@ -343,7 +343,7 @@ export default function ReportsPage() {
                       <span className="text-gray-600">{stage.count} candidates ({stage.percentage}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div className="bg-black h-3 rounded-full transition-all duration-300" style={{ width: `${stage.percentage}%` }} />
+                      <div className="bg-[#0445AD] h-3 rounded-full transition-all duration-300" style={{ width: `${stage.percentage}%` }} />
                     </div>
                   </div>
                 ))}

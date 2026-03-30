@@ -25,8 +25,8 @@ export default function Sidebar({ activeId = "details", onNavigate }: SidebarPro
     };
 
     return (
-        <aside className="w-56 shrink-0 bg-white border-r border-gray-100 min-h-full py-3 shadow-sm">
-            <nav className="flex flex-col gap-0.5 px-2">
+        <aside className="w-56 shrink-0 bg-[#E7EFF1] border-r border-gray-100 min-h-full py-3 shadow-sm">
+            <nav className="flex flex-col gap-0.5 px-3 py-7">
                 {navItems.map((item) => (
                     <Link
                         key={item.id}

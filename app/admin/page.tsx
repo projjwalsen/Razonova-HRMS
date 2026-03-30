@@ -220,7 +220,7 @@ export default function SuperAdminDashboard() {
             return (
               <div key={index} className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <span className={`text-sm font-semibold ${
@@ -243,8 +243,8 @@ export default function SuperAdminDashboard() {
               onClick={() => setActiveTab('overview')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'overview'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Overview
@@ -253,8 +253,8 @@ export default function SuperAdminDashboard() {
               onClick={() => setActiveTab('companies')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'companies'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Companies
@@ -263,8 +263,8 @@ export default function SuperAdminDashboard() {
               onClick={() => setActiveTab('users')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'users'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Users
@@ -273,8 +273,8 @@ export default function SuperAdminDashboard() {
               onClick={() => setActiveTab('analytics')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'analytics'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Analytics
@@ -295,7 +295,7 @@ export default function SuperAdminDashboard() {
                   </h3>
                   <Link
                     href="/admin/subscription-setup"
-                    className="text-sm text-black hover:underline flex items-center gap-1"
+                    className="text-sm text-[#0445AD] hover:underline flex items-center gap-1"
                   >
                     Configure Plans
                     <Settings className="w-4 h-4" />
@@ -335,7 +335,7 @@ export default function SuperAdminDashboard() {
                       >
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white text-xs font-bold">
+                            <div className="w-10 h-10 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-xs font-bold">
                               {company.company.slice(0, 2).toUpperCase()}
                             </div>
                             <div>
@@ -367,7 +367,7 @@ export default function SuperAdminDashboard() {
                             <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                               <div
                                 className={`h-full rounded-full transition-all duration-300 ${
-                                  employeePercentage > 100 ? 'bg-red-500' : 'bg-black'
+                                  employeePercentage > 100 ? 'bg-red-500' : 'bg-[#0445AD]'
                                 }`}
                                 style={{ width: `${Math.min(employeePercentage, 100)}%` }}
                               />
@@ -395,7 +395,7 @@ export default function SuperAdminDashboard() {
                 </div>
 
                 <div className="mt-4 text-center">
-                  <Link href="/admin/companies" className="text-sm text-gray-600 hover:text-black hover:underline">
+                  <Link href="/admin/companies" className="text-sm text-gray-600 hover:text-[#0445AD] hover:underline">
                     View All Companies →
                   </Link>
                 </div>
@@ -410,13 +410,13 @@ export default function SuperAdminDashboard() {
                     <Building2 className="w-5 h-5" />
                     Recent Companies
                   </h3>
-                  <button className="text-sm text-black hover:underline">View All</button>
+                  <button className="text-sm text-[#0445AD] hover:underline">View All</button>
                 </div>
                 <div className="space-y-4">
                   {recentCompanies.slice(0, 5).map((company) => (
                     <div key={company.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-10 h-10 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-sm font-bold">
                           {company.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
@@ -442,7 +442,7 @@ export default function SuperAdminDashboard() {
                     <Activity className="w-5 h-5" />
                     System Logs
                   </h3>
-                  <button className="text-sm text-black hover:underline">View All</button>
+                  <button className="text-sm text-[#0445AD] hover:underline">View All</button>
                 </div>
                 <div className="space-y-3">
                   {systemLogs.map((log) => (
@@ -470,7 +470,7 @@ export default function SuperAdminDashboard() {
                     <AlertCircle className="w-5 h-5" />
                     Pending Approvals
                   </h3>
-                  <button className="text-sm text-black hover:underline">View All</button>
+                  <button className="text-sm text-[#0445AD] hover:underline">View All</button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">

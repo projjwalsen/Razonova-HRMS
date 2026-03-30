@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 analytics-item">
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <DollarSign className="w-12 h-12 text-black" />
+              <DollarSign className="w-12 h-12 text-[#0445AD]" />
             </div>
             <div className="text-3xl font-bold mb-1 font-['Montserrat']">$284,700</div>
             <div className="text-sm text-gray-600 mb-2">Total Revenue</div>
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <Building2 className="w-12 h-12 text-black" />
+              <Building2 className="w-12 h-12 text-[#0445AD]" />
             </div>
             <div className="text-3xl font-bold mb-1 font-['Montserrat']">156</div>
             <div className="text-sm text-gray-600 mb-2">Active Companies</div>
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <Users className="w-12 h-12 text-black" />
+              <Users className="w-12 h-12 text-[#0445AD]" />
             </div>
             <div className="text-3xl font-bold mb-1 font-['Montserrat']">12,847</div>
             <div className="text-sm text-gray-600 mb-2">Total Users</div>
@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <Activity className="w-12 h-12 text-black" />
+              <Activity className="w-12 h-12 text-[#0445AD]" />
             </div>
             <div className="text-3xl font-bold mb-1 font-['Montserrat']">2,654</div>
             <div className="text-sm text-gray-600 mb-2">Active Sessions</div>
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
                 {revenueData.map((data, index) => (
                   <div key={index} className="flex-1 flex flex-col items-center">
                     <div
-                      className="w-full bg-black rounded-t-lg transition-all duration-500 hover:bg-gray-800"
+                      className="w-full bg-[#0445AD] rounded-t-lg transition-all duration-500 hover:bg-gray-800"
                       style={{ height: `${(data.revenue / 75000) * 100}%` }}
                     />
                     <div className="text-xs text-gray-600 mt-2 font-medium">{data.month}</div>
@@ -160,7 +160,7 @@ export default function AnalyticsPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
-                        className="bg-black h-3 rounded-full transition-all duration-500"
+                        className="bg-[#0445AD] h-3 rounded-full transition-all duration-500"
                         style={{ width: `${plan.percentage}%` }}
                       />
                     </div>
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
                 {topCompanies.map((company, index) => (
                   <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      <div className="w-8 h-8 bg-[#0445AD] rounded-full flex items-center justify-center text-white text-sm font-bold">
                         {index + 1}
                       </div>
                       <div>

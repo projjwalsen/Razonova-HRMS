@@ -195,7 +195,7 @@ export default function TrainingPage() {
             return (
               <div key={index} className="p-6 bg-white rounded-xl border-2 border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                 </div>
@@ -212,7 +212,7 @@ export default function TrainingPage() {
             <button
               onClick={() => setActiveTab('courses')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'courses' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'courses' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Available Courses
@@ -220,7 +220,7 @@ export default function TrainingPage() {
             <button
               onClick={() => setActiveTab('my-learning')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'my-learning' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'my-learning' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               My Learning
@@ -228,7 +228,7 @@ export default function TrainingPage() {
             <button
               onClick={() => setActiveTab('calendar')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'calendar' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'calendar' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Calendar
@@ -236,7 +236,7 @@ export default function TrainingPage() {
             <button
               onClick={() => setActiveTab('feedback')}
               className={`px-6 py-3 font-semibold transition-all ${
-                activeTab === 'feedback' ? 'text-black border-b-2 border-black' : 'text-gray-500 hover:text-black'
+                activeTab === 'feedback' ? 'text-[#0445AD] border-b-2 border-black' : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Feedback & Ratings
@@ -271,7 +271,7 @@ export default function TrainingPage() {
                       <span className="font-semibold">⭐ {course.rating}</span>
                     </div>
                   </div>
-                  <button className="w-full px-4 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                  <button className="w-full px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                     {course.status === 'Enrolled' ? 'Continue Learning' : 'Enroll Now'}
                   </button>
                 </div>
@@ -304,7 +304,7 @@ export default function TrainingPage() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3">
                       <div
-                        className="bg-black h-3 rounded-full transition-all duration-300"
+                        className="bg-[#0445AD] h-3 rounded-full transition-all duration-300"
                         style={{ width: `${course.progress}%` }}
                       />
                     </div>
@@ -313,7 +313,7 @@ export default function TrainingPage() {
                     <span className="text-sm text-gray-600">
                       {course.status === 'In Progress' ? `Next due: ${course.nextDue}` : `Completed: ${course.completedOn}`}
                     </span>
-                    <button className="px-6 py-2 bg-black text-white rounded-lg font-semibold hover:bg-gray-800">
+                    <button className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800">
                       {course.status === 'In Progress' ? 'Continue' : 'Review'}
                     </button>
                   </div>
@@ -332,7 +332,7 @@ export default function TrainingPage() {
                 {upcomingSessions.map((session) => (
                   <div key={session.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center text-white text-xl">
+                      <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-xl">
                         📅
                       </div>
                       <div>
@@ -342,7 +342,7 @@ export default function TrainingPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">{session.location}</p>
-                      <button className="text-sm text-black hover:underline mt-1">Join Session</button>
+                      <button className="text-sm text-[#0445AD] hover:underline mt-1">Join Session</button>
                     </div>
                   </div>
                 ))}
@@ -400,7 +400,7 @@ export default function TrainingPage() {
                   <button
                     onClick={handleSubmitFeedback}
                     disabled={!selectedCourse || rating === 0}
-                    className="w-full px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Submit Feedback
                   </button>
@@ -452,7 +452,7 @@ export default function TrainingPage() {
                 {courseFeedbacks.map((item) => (
                   <div key={item.id} className="p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white font-bold">
+                      <div className="w-12 h-12 bg-[#0445AD] rounded-full flex items-center justify-center text-white font-bold">
                         {item.employeeAvatar}
                       </div>
                       <div className="flex-1">

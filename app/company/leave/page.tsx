@@ -240,7 +240,7 @@ export default function LeavePage() {
           </div>
           <button
             onClick={() => setShowApplyForm(!showApplyForm)}
-            className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+            className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Apply for Leave
@@ -258,7 +258,7 @@ export default function LeavePage() {
                 </h2>
                 <button
                   onClick={() => setShowApplyForm(false)}
-                  className="text-gray-600 hover:text-black"
+                  className="text-gray-600 hover:text-[#0445AD]"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -382,7 +382,7 @@ export default function LeavePage() {
                 <div className="flex gap-4">
                   <button
                     type="submit"
-                    className="px-8 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+                    className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
                   >
                     <FileText className="w-4 h-4" />
                     Submit Request
@@ -407,8 +407,8 @@ export default function LeavePage() {
               onClick={() => setActiveTab('balance')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'balance'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Leave Balance
@@ -417,8 +417,8 @@ export default function LeavePage() {
               onClick={() => setActiveTab('requests')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'requests'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               My Requests
@@ -427,8 +427,8 @@ export default function LeavePage() {
               onClick={() => setActiveTab('approvals')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'approvals'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Pending Approvals
@@ -437,8 +437,8 @@ export default function LeavePage() {
               onClick={() => setActiveTab('overview')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'overview'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Team Overview
@@ -455,7 +455,7 @@ export default function LeavePage() {
                 return (
                   <div key={index} className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
                     <div className="flex items-center justify-between mb-4">
-                      <Icon className="w-12 h-12 text-black" />
+                      <Icon className="w-12 h-12 text-[#0445AD]" />
                       <span className="text-sm text-gray-600">{balance.remaining} / {balance.total} days</span>
                     </div>
                     <h3 className="text-lg font-bold mb-4 font-['Montserrat']">{balance.type}</h3>
@@ -466,7 +466,7 @@ export default function LeavePage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className="bg-black h-2 rounded-full"
+                          className="bg-[#0445AD] h-2 rounded-full"
                           style={{ width: `${(balance.used / balance.total) * 100}%` }}
                         />
                       </div>
@@ -606,7 +606,7 @@ export default function LeavePage() {
                   {teamLeaveSchedule.map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-10 h-10 bg-[#0445AD] rounded-full flex items-center justify-center text-white text-sm font-bold">
                           {item.employee.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>

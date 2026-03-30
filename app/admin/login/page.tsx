@@ -25,7 +25,7 @@ export default function LoginPage() {
             {/* Header */}
             <div className="text-center mb-12">
               <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-xl font-['Montserrat']">H</span>
                 </div>
                 <span className="text-2xl font-bold font-['Montserrat']">
@@ -79,7 +79,7 @@ export default function LoginPage() {
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm font-semibold text-black hover:underline"
+                    className="text-sm font-semibold text-[#0445AD] hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -87,7 +87,7 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  className="w-full px-8 py-4 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
+                  className="w-full px-8 py-4 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
                 >
                   Sign In
                 </button>

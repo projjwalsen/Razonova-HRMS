@@ -311,7 +311,7 @@ export default function DesignationsPage() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0445AD]/40">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-800">

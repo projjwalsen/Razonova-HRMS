@@ -163,7 +163,7 @@ export default function CompaniesPage() {
           </div>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+            className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Company
@@ -174,7 +174,7 @@ export default function CompaniesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 company-item">
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <Building2 className="w-12 h-12 text-black" />
+              <Building2 className="w-12 h-12 text-[#0445AD]" />
               <span className="text-sm text-gray-600">Total</span>
             </div>
             <div className="text-3xl font-bold font-['Montserrat']">{companies.length}</div>
@@ -198,7 +198,7 @@ export default function CompaniesPage() {
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <Users className="w-12 h-12 text-black" />
+              <Users className="w-12 h-12 text-[#0445AD]" />
               <span className="text-sm text-gray-600">Total Users</span>
             </div>
             <div className="text-3xl font-bold font-['Montserrat']">
@@ -235,8 +235,8 @@ export default function CompaniesPage() {
               onClick={() => setActiveTab('all')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'all'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               All Companies
@@ -245,8 +245,8 @@ export default function CompaniesPage() {
               onClick={() => setActiveTab('active')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'active'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Active
@@ -255,8 +255,8 @@ export default function CompaniesPage() {
               onClick={() => setActiveTab('trial')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'trial'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Trial
@@ -265,8 +265,8 @@ export default function CompaniesPage() {
               onClick={() => setActiveTab('suspended')}
               className={`px-6 py-3 font-semibold transition-all duration-300 ${
                 activeTab === 'suspended'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               Suspended
@@ -296,7 +296,7 @@ export default function CompaniesPage() {
                     <tr key={company.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                          <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-sm font-bold">
                             {company.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
@@ -341,7 +341,7 @@ export default function CompaniesPage() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className="bg-black h-2 rounded-full"
+                              className="bg-[#0445AD] h-2 rounded-full"
                               style={{ width: company.storageUsed }}
                             />
                           </div>

@@ -179,7 +179,7 @@ export default function SubscriptionSetupPage() {
             setEditingPlan(null);
             setShowAddForm(true);
           }}
-          className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+          className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
           Add Plan
@@ -193,8 +193,8 @@ export default function SubscriptionSetupPage() {
             onClick={() => setBillingCycle('monthly')}
             className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
               billingCycle === 'monthly'
-                ? 'bg-white text-black shadow-sm'
-                : 'text-gray-600 hover:text-black'
+                ? 'bg-white text-[#0445AD] shadow-sm'
+                : 'text-gray-600 hover:text-[#0445AD]'
             }`}
           >
             Monthly
@@ -203,12 +203,12 @@ export default function SubscriptionSetupPage() {
             onClick={() => setBillingCycle('annual')}
             className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 relative ${
               billingCycle === 'annual'
-                ? 'bg-white text-black shadow-sm'
-                : 'text-gray-600 hover:text-black'
+                ? 'bg-white text-[#0445AD] shadow-sm'
+                : 'text-gray-600 hover:text-[#0445AD]'
             }`}
           >
             Annual
-            <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+            <span className="absolute -top-1 -right-1 bg-[#0445AD] text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
               Save 20%
             </span>
           </button>
@@ -259,7 +259,7 @@ export default function SubscriptionSetupPage() {
                   <h4 className="font-semibold text-sm">Included Modules ({plan.modules.length})</h4>
                   <button
                     onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
-                    className="text-gray-400 hover:text-black transition-colors"
+                    className="text-gray-400 hover:text-[#0445AD] transition-colors"
                   >
                     {expandedPlanId === plan.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                   </button>
@@ -277,7 +277,7 @@ export default function SubscriptionSetupPage() {
                           onClick={() => toggleModule(plan.id, module.id)}
                           className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
                             isIncluded
-                              ? 'bg-black text-white border-black'
+                              ? 'bg-[#0445AD] text-white border-black'
                               : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
                           }`}
                         >
@@ -317,7 +317,7 @@ export default function SubscriptionSetupPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEditPlan(plan)}
-                    className="flex-1 px-4 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2.5 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                   >
                     <Edit className="w-4 h-4" />
                     Edit
@@ -351,7 +351,7 @@ export default function SubscriptionSetupPage() {
                 <h3 className="font-semibold mb-1">{module.name}</h3>
                 <p className="text-xs text-gray-500 mb-3">{module.description}</p>
                 <div className="text-xs text-gray-500">
-                  <span className="font-semibold text-black">{plansWithModule}</span> / {plans.length} plans
+                  <span className="font-semibold text-[#0445AD]">{plansWithModule}</span> / {plans.length} plans
                 </div>
               </div>
             );
@@ -417,7 +417,7 @@ export default function SubscriptionSetupPage() {
 
       {/* Add/Edit Plan Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#0445AD]/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -429,7 +429,7 @@ export default function SubscriptionSetupPage() {
                     setShowAddForm(false);
                     setEditingPlan(null);
                   }}
-                  className="text-gray-400 hover:text-black transition-colors"
+                  className="text-gray-400 hover:text-[#0445AD] transition-colors"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -588,7 +588,7 @@ function PlanForm({
                 onClick={() => toggleModule(module.id)}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
                   isSelected
-                    ? 'bg-black text-white border-black'
+                    ? 'bg-[#0445AD] text-white border-black'
                     : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
                 }`}
               >
@@ -622,7 +622,7 @@ function PlanForm({
       <div className="flex gap-4 pt-4 border-t border-gray-200">
         <button
           type="submit"
-          className="flex-1 px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+          className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
           {plan ? 'Update Plan' : 'Create Plan'}

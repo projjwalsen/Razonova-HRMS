@@ -53,7 +53,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
-            className="px-6 py-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saveStatus === 'saving' ? (
               <>
@@ -81,8 +81,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('general')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'general'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -92,8 +92,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('security')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'security'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Shield className="w-4 h-4" />
@@ -103,8 +103,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('notifications')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'notifications'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Bell className="w-4 h-4" />
@@ -114,8 +114,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('billing')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'billing'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <CreditCard className="w-4 h-4" />
@@ -125,8 +125,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('integrations')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'integrations'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Database className="w-4 h-4" />
@@ -136,8 +136,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('company')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'company'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Building2 className="w-4 h-4" />
@@ -147,8 +147,8 @@ export default function SettingsPage() {
               onClick={() => setActiveTab('leave')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'leave'
-                  ? 'text-black border-b-2 border-black'
-                  : 'text-gray-500 hover:text-black'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
               <Calendar className="w-4 h-4" />
@@ -487,7 +487,7 @@ export default function SettingsPage() {
                     <button className={`px-4 py-2 rounded-lg font-semibold text-sm ${
                       integration.status === 'Connected'
                         ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                        : 'bg-black text-white hover:bg-gray-800'
+                        : 'bg-[#0445AD] text-white hover:bg-gray-800'
                     }`}>
                       {integration.status === 'Connected' ? 'Disconnect' : 'Connect'}
                     </button>
@@ -613,7 +613,7 @@ export default function SettingsPage() {
                           className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                             ['Sat', 'Sun'].includes(day)
                               ? 'bg-gray-200 text-gray-600'
-                              : 'bg-black text-white'
+                              : 'bg-[#0445AD] text-white'
                           }`}
                         >
                           {day}
@@ -697,7 +697,7 @@ export default function SettingsPage() {
                             </span>
                           )}
                         </div>
-                        <button className="text-gray-400 hover:text-black">✕</button>
+                        <button className="text-gray-400 hover:text-[#0445AD]">✕</button>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -719,7 +719,7 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   ))}
-                  <button className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-black hover:text-black transition-all font-semibold">
+                  <button className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-black hover:text-[#0445AD] transition-all font-semibold">
                     + Add Leave Type
                   </button>
                 </div>
