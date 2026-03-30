@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/org/Sidebar";
 import { usePathname } from "next/navigation";
@@ -22,8 +24,18 @@ export default function OrganizationLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const pathname = usePathname();
   const activeId = getActiveIdFromPath(pathname);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+      }
+    }
+  }, [router]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f3f8] font-sans">
