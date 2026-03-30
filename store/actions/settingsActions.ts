@@ -44,7 +44,7 @@ export const fetchSettings = createAsyncThunk<OrganizationSettings, void>(
       const tenantId = state.auth.user?.tenantId;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/settings/${tenantId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/settings`,
         {
           method: "GET",
           headers: {

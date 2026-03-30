@@ -102,7 +102,7 @@ export const updateDepartment = createAsyncThunk<Department, { id: string; name:
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/department/update/${payload.id}`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             ...(token && { Authorization: `Bearer ${token}` }),

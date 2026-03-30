@@ -104,7 +104,7 @@ export const updateDesignation = createAsyncThunk<
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/designation/update/${payload.id}`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             ...(token && { Authorization: `Bearer ${token}` }),
