@@ -12,8 +12,8 @@ export default function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your login logic here
-    router.push('/company');
+   
+    router.push('/organization'); 
   };
 
   return (

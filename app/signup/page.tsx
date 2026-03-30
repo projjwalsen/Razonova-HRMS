@@ -1,421 +1,332 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { signup, clearError } from "@/store/actions/authActions";
+import { useRouter } from "next/navigation";
 
-interface RoleConfig {
-  id: string;
-  name: string;
-  description: string;
-  fields: string[];
-}
-
-const roles: RoleConfig[] = [
-  {
-    id: 'company_admin',
-    name: 'Company Admin',
-    description: 'Manage HR operations, payroll, attendance, and generate reports within your organization',
-    fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department'],
-  },
-  {
-    id: 'manager',
-    name: 'Manager',
-    description: 'Oversee team members, approve leave requests, and conduct performance evaluations',
-    fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department', 'teamSize'],
-  },
-  {
-    id: 'employee',
-    name: 'Employee',
-    description: 'Access self-service portal to view profile, mark attendance, apply for leave, and track performance',
-    fields: ['firstName', 'lastName', 'email', 'company', 'phone', 'employeeId', 'department', 'manager'],
-  },
-];
-
-export default function SignupPage() {
+export default function SignUpPage() {
+  const dispatch = useAppDispatch();
   const router = useRouter();
-  const formRef = useRef<HTMLDivElement>(null);
-  const [selectedRole, setSelectedRole] = useState<string>('employee');
-  const [formData, setFormData] = useState({
-    // Common fields
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    company: '',
+  const { loading, error } = useAppSelector((state) => state.auth);
 
-    // Role specific
-    employeeId: '',
-    department: '',
-    manager: '',
-    teamSize: '',
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreed, setAgreed] = useState(true);
+  const [passwordError, setPasswordError] = useState("");
 
-    // Common
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) {
+        router.push("/organization");
+      }
+    }
+  }, [router]);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+    companyName: "",
   });
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch(clearError());
+    setPasswordError("");
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
-
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+    setPasswordError("");
+
+    if (!agreed) return;
+
+    if (form.password !== form.confirmPassword) {
+      setPasswordError("Passwords do not match");
       return;
     }
 
-    // Validate password length
-    if (formData.password.length < 8) {
-      alert('Password must be at least 8 characters long!');
-      return;
+    const result = await dispatch(signup(form));
+    if (signup.fulfilled.match(result)) {
+      router.push("/login");
     }
-
-    // Here you would typically send the data to your backend
-    console.log('Signup Data:', { ...formData, role: selectedRole });
-    alert(`Account created successfully as ${roles.find(r => r.id === selectedRole)?.name}!`);
-    router.push('/login');
   };
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const currentRole = roles.find(r => r.id === selectedRole);
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50">
-        <div className="min-h-screen flex items-center justify-center py-12 px-4">
-          <div className="w-full max-w-4xl">
-            <div ref={formRef} className="signup-form">
-              {/* Header */}
-              <div className="text-center mb-12">
-                <Link href="/" className="inline-flex items-center gap-3 mb-8">
-                  <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-xl font-['Montserrat']">H</span>
-                  </div>
-                  <span className="text-2xl font-bold font-['Montserrat']">
-                    HRMS
-                  </span>
-                </Link>
-                <h1 className="text-4xl font-bold mb-4 font-['Montserrat']">
-                  Create Your Account
-                </h1>
-                <p className="text-gray-600">
-                  Choose your role and fill in the required information
+    <div className="min-h-screen  flex flex-col w-full">
+      {/* ── HEADER ── */}
+      <header className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="Logo" width={150} height={32} />
+
+          </div>
+
+          {/* Nav right */}
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-500 hidden sm:inline">Have a Razonova account?</span>
+            <a
+              href="/login"
+              className="text-[#1a3a8f] font-bold tracking-widest text-xs uppercase border border-[#1a3a8f] px-4 py-1.5 rounded hover:bg-[#1a3a8f] hover:text-white transition-colors duration-200"
+            >
+              Sign In
+            </a>
+          </div>
+        </div>
+      </header>
+
+      {/* ── MAIN ── */}
+      <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full rounded-2xl max-w-7xl overflow-hidden flex flex-col lg:flex-row justify-center items-center">
+
+          {/* ── LEFT: FORM PANEL ── */}
+          <div className="w-full lg:w-[55%] p-8 sm:p-10 xl:p-14 flex flex-col justify-center">
+            {/* Mini brand */}
+            <div className="flex items-center gap-2 mb-6">
+              <Image src="/logo.png" alt="Logo" width={190} height={24} className="rounded-sm" />
+
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">
+              Start your 30-day free trial
+            </h1>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+                {passwordError}
+              </div>
+            )}
+
+            <div className="space-y-5">
+              {/* Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Full Name <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Full Name"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Email ID <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email ID"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Password <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Password"
+                    value={form.password}
+                    onChange={handleChange}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 pr-11 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Enter your Phone Number"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Company Name <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="companyName"
+                  placeholder="Enter your Company Name"
+                  value={form.companyName}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Confirm Password <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 pr-11 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label="Toggle confirm password visibility"
+                  >
+                    {showConfirmPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Terms checkbox */}
+              <div className="flex items-start gap-3">
+                <div
+                  onClick={() => setAgreed(!agreed)}
+                  className={`w-5 h-5 mt-0.5 flex-shrink-0 rounded cursor-pointer border-2 flex items-center justify-center transition-colors ${agreed ? "bg-[#1a3a8f] border-[#1a3a8f]" : "bg-white border-gray-300"
+                    }`}
+                >
+                  {agreed && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  I agree to the{" "}
+                  <a href="#" className="text-[#1a3a8f] font-semibold hover:underline">Terms Of Service</a>
+                  {" "}and{" "}
+                  <a href="#" className="text-[#1a3a8f] font-semibold hover:underline">Privacy Policy</a>
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Role Selection */}
-                <div className="lg:col-span-1">
-                  <div className="sticky top-8">
-                    <h2 className="text-xl font-bold mb-4 font-['Montserrat']">Select Your Role</h2>
-                    <div className="space-y-3">
-                      {roles.map((role) => (
-                        <button
-                          key={role.id}
-                          onClick={() => setSelectedRole(role.id)}
-                          className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-300 ${
-                            selectedRole === role.id
-                              ? 'bg-black text-white border-black'
-                              : 'bg-white text-gray-900 border-gray-200 hover:border-black'
-                          }`}
-                        >
-                          <div className="font-bold mb-1">{role.name}</div>
-                          <div className={`text-sm ${selectedRole === role.id ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {role.description}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {/* Submit */}
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full bg-[#0445AD] text-white font-bold tracking-widest text-sm uppercase py-3.5 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "Signing up..." : "Free Sign Up"}
+              </button>
+            </div>
 
-                {/* Signup Form */}
-                <div className="lg:col-span-2">
-                  <div className="p-8 bg-white border-2 border-gray-100 rounded-2xl">
-                    <div className="mb-6">
-                      <h2 className="text-2xl font-bold mb-2 font-['Montserrat']">
-                        Create {currentRole?.name} Account
-                      </h2>
-                      <p className="text-gray-600 text-sm">
-                        Fill in the required information for your {currentRole?.name.toLowerCase()} account
-                      </p>
-                    </div>
+            {/* Social login */}
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-gray-100" />
+              <span className="text-gray-300 text-xs uppercase tracking-widest">or</span>
+              <div className="flex-1 h-px bg-gray-100" />
+            </div>
 
-                    <form onSubmit={handleSignup} className="space-y-6">
-                      {/* Common Fields - All Roles */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            First Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.firstName}
-                            onChange={(e) => handleInputChange('firstName', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="John"
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Last Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.lastName}
-                            onChange={(e) => handleInputChange('lastName', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Doe"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">
-                          Email Address *
-                        </label>
-                        <input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                          placeholder="you@company.com"
-                          required
-                        />
-                      </div>
-
-                      {/* Company Name - All roles */}
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">
-                          Company Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.company}
-                          onChange={(e) => handleInputChange('company', e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                          placeholder="Your Company"
-                          required
-                        />
-                      </div>
-
-                      {/* Phone - All roles */}
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">
-                          Phone Number *
-                        </label>
-                        <input
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                          placeholder="+1 (234) 567-890"
-                          required
-                        />
-                      </div>
-
-                      {/* Employee ID - All roles */}
-                      {(selectedRole === 'company_admin' || selectedRole === 'manager' || selectedRole === 'employee') && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Employee ID *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.employeeId}
-                            onChange={(e) => handleInputChange('employeeId', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="EMP001"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      {/* Department - All roles */}
-                      {(selectedRole === 'company_admin' || selectedRole === 'manager' || selectedRole === 'employee') && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Department *
-                          </label>
-                          <select
-                            value={formData.department}
-                            onChange={(e) => handleInputChange('department', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            required
-                          >
-                            <option value="">Select Department</option>
-                            <option value="engineering">Engineering</option>
-                            <option value="marketing">Marketing</option>
-                            <option value="hr">Human Resources</option>
-                            <option value="finance">Finance</option>
-                            <option value="sales">Sales</option>
-                            <option value="operations">Operations</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Manager - Employee only */}
-                      {selectedRole === 'employee' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Manager *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.manager}
-                            onChange={(e) => handleInputChange('manager', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Manager Name"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      {/* Team Size - Manager only */}
-                      {selectedRole === 'manager' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Team Size *
-                          </label>
-                          <input
-                            type="number"
-                            value={formData.teamSize}
-                            onChange={(e) => handleInputChange('teamSize', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Number of team members"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      {/* Manager - Employee only */}
-                      {selectedRole === 'employee' && (
-                        <div>
-                          <label className="block text-sm font-semibold mb-2">
-                            Manager Name *
-                          </label>
-                          <input
-                            type="text"
-                            value={formData.manager}
-                            onChange={(e) => handleInputChange('manager', e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                            placeholder="Your manager's name"
-                            required
-                          />
-                        </div>
-                      )}
-
-                      {/* Password - All roles */}
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">
-                          Password *
-                        </label>
-                        <input
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) => handleInputChange('password', e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                          placeholder="••••••••"
-                          required
-                          minLength={8}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold mb-2">
-                          Confirm Password *
-                        </label>
-                        <input
-                          type="password"
-                          value={formData.confirmPassword}
-                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                          className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black transition-colors"
-                          placeholder="••••••••"
-                          required
-                          minLength={8}
-                        />
-                      </div>
-
-                      {/* Terms and Conditions */}
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          id="terms"
-                          checked={formData.agreeToTerms}
-                          onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
-                          className="mt-1 w-4 h-4 accent-black"
-                          required
-                        />
-                        <label htmlFor="terms" className="text-sm text-gray-600">
-                          I agree to the{' '}
-                          <a href="/terms" className="text-black underline hover:underline">
-                            Terms of Service
-                          </a>
-                          {' '}and{' '}
-                          <a href="/privacy" className="text-black underline hover:underline">
-                            Privacy Policy
-                          </a>
-                        </label>
-                      </div>
-
-                      {/* Marketing Consent */}
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          id="marketing"
-                          className="mt-1 w-4 h-4 accent-black"
-                        />
-                        <label htmlFor="marketing" className="text-sm text-gray-600">
-                          I'd like to receive product updates and marketing communications
-                        </label>
-                      </div>
-
-                      {/* Submit Button */}
-                      <button
-                        type="submit"
-                        className="w-full px-8 py-4 bg-black text-white rounded-lg font-bold text-lg hover:bg-gray-800 transition-all duration-300"
-                      >
-                        Create {currentRole?.name} Account
-                      </button>
-                    </form>
-
-                    {/* Login Link */}
-                    <div className="mt-6 text-center">
-                      <p className="text-gray-600">
-                        Already have an account?{' '}
-                        <Link href="/login" className="font-bold text-black hover:underline">
-                          Sign in
-                        </Link>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Trust Signals */}
-                  <div className="mt-6 p-4 bg-blue-50 rounded-xl border-2 border-blue-100">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">ℹ️</span>
-                      <div>
-                        <p className="font-bold text-sm mb-1">Role Information</p>
-                        <p className="text-sm text-gray-600">
-                          {currentRole?.description}. Different roles have different access levels and permissions within the system.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-4 flex items-center gap-3">
+              {/* LinkedIn */}
+              <button className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition">
+                <svg className="w-4 h-4 text-[#0077B5]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S.02 4.88.02 3.5C.02 2.12 1.13 1 2.5 1S4.98 2.12 4.98 3.5zM.5 8.5h4V24h-4V8.5zm6.5 0h3.8v2.13h.05c.53-1 1.83-2.13 3.77-2.13 4.03 0 4.78 2.65 4.78 6.1V24h-4v-8.7c0-2.08-.04-4.75-2.9-4.75-2.9 0-3.34 2.27-3.34 4.6V24H7V8.5z" />
+                </svg>
+              </button>
+              {/* Google */}
+              <button className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+              </button>
+              {/* Twitter */}
+              <button className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition">
+                <svg className="w-4 h-4 text-[#1DA1F2]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
+                </svg>
+              </button>
+              {/* Facebook */}
+              <button className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition">
+                <svg className="w-4 h-4 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+                </svg>
+              </button>
             </div>
           </div>
+
+          {/* ── RIGHT: IMAGE PANEL ── */}
+          <div className="hidden lg:flex lg:w-[45%] relative items-stretch">
+            {/* Decorative accent */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a3a8f]/10 via-transparent to-[#1a3a8f]/5 z-10 pointer-events-none rounded-r-2xl" />
+
+            {/* Placeholder image — swap src with real image */}
+            <div className="relative w-full h-full min-h-[520px] overflow-hidden">
+              <Image
+                src="/auth/signup.svg"
+                alt="Professionals collaborating"
+                width={100}
+                height={100}
+
+                className="w-full h-full object-cover object-center"
+              />
+
+            </div>
+          </div>
+
         </div>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }

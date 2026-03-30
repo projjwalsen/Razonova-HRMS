@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchOrganizationByTenant } from '@/store/actions/organizationActions';
 import {
   LayoutDashboard,
   Users,
@@ -14,25 +17,58 @@ import {
   Menu,
   X,
   Bell,
-  Search,
-  MoreHorizontal,
   FileText,
   BarChart3,
-  
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const { organization } = useAppSelector((state) => state.organization);
+  const [checking, setChecking] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const checkAccess = async () => {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          router.push("/login");
+          return;
+        }
+
+        // Check if organization exists
+        await dispatch(fetchOrganizationByTenant());
+      }
+    };
+
+    checkAccess();
+  }, [dispatch, router]);
+
+  useEffect(() => {
+    if (!checking) return;
+
+    // Once fetchOrganizationByTenant completes, check result
+    if (organization === null && !checking) {
+      router.push("/organization");
+      return;
+    }
+
+    if (organization) {
+      setChecking(false);
+    }
+  }, [organization, checking, router]);
+
+  useEffect(() => {
+    if (checking) return;
     // CSS animations - no blur
     const items = dashboardRef.current?.querySelectorAll('.dashboard-item');
     items?.forEach((item, index) => {
       (item as HTMLElement).style.animation = `fadeInSmooth 0.5s ease-out ${index * 0.1}s forwards`;
       (item as HTMLElement).style.opacity = '0'; // Start hidden
     });
-  }, []);
+  }, [checking]);
 
   const stats = [
     {
@@ -146,6 +182,15 @@ export default function AdminDashboard() {
         return 'bg-gray-100 text-gray-700';
     }
   };
+
+  // Show loading spinner while checking access
+  if (checking) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1a3a8f]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">
