@@ -5,6 +5,10 @@ import metaReducer from "./slices/metaSlice";
 import settingsReducer from "./actions/settingsActions";
 import departmentReducer from "./actions/departmentActions";
 import designationReducer from "./actions/designationActions";
+import onboardingReducer from "./actions/onboardingActions";
+import attendanceReducer from "./actions/attendanceActions";
+import leaveReducer from "./actions/leaveActions";
+import payrollReducer from "./actions/payrollActions";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +18,10 @@ export const store = configureStore({
     settings: settingsReducer,
     departments: departmentReducer,
     designations: designationReducer,
+    onboarding: onboardingReducer,
+    attendance: attendanceReducer,
+    leave: leaveReducer,
+    payroll: payrollReducer,
   },
 });
 

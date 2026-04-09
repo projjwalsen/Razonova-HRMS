@@ -36,7 +36,17 @@ export default function LoginPage() {
 
     const result = await dispatch(login(form));
     if (login.fulfilled.match(result)) {
-      router.push("/organization");
+      const userData = result.payload?.data;
+      const roles = (userData as any)?.roles || [];
+
+      // Check user role and redirect accordingly
+      if (roles.includes("COMPANY_ADMIN")) {
+        router.push("/organization");
+      } else if (roles.includes("EMPLOYEE")) {
+        router.push("/employee");
+      } else {
+        router.push("/organization");
+      }
     }
   };
 
