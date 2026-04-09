@@ -60,7 +60,7 @@ export default function SignUpPage() {
     <div className="min-h-screen  flex flex-col w-full">
       {/* ── HEADER ── */}
       <header className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className=" px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <Image src="/logo.png" alt="Logo" width={150} height={32} />
@@ -72,7 +72,7 @@ export default function SignUpPage() {
             <span className="text-gray-500 hidden sm:inline">Have a Razonova account?</span>
             <a
               href="/login"
-              className="text-[#1a3a8f] font-bold tracking-widest text-xs uppercase border border-[#1a3a8f] px-4 py-1.5 rounded hover:bg-[#1a3a8f] hover:text-white transition-colors duration-200"
+              className="text-[#1a3a8f] font-bold tracking-widest text-xs uppercase border border-[#1a3a8f] px-4 py-1.5 rounded transition-colors duration-200"
             >
               Sign In
             </a>
@@ -172,38 +172,7 @@ export default function SignUpPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="Enter your Phone Number"
-                  value={form.phone}
-                  onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
-                />
-              </div>
-
-              {/* Company Name */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
-                  Company Name <span className="text-[#1a3a8f]">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="companyName"
-                  placeholder="Enter your Company Name"
-                  value={form.companyName}
-                  onChange={handleChange}
-                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
-                />
-              </div>
-
-              {/* Confirm Password */}
+               {/* Confirm Password */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
                   Confirm Password <span className="text-[#1a3a8f]">*</span>
@@ -236,6 +205,37 @@ export default function SignUpPage() {
                   </button>
                 </div>
               </div>
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Enter your Phone Number"
+                  value={form.phone}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+              {/* Company Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5 tracking-wide uppercase">
+                  Company Name <span className="text-[#1a3a8f]">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="companyName"
+                  placeholder="Enter your Company Name"
+                  value={form.companyName}
+                  onChange={handleChange}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/30 focus:border-[#1a3a8f] transition"
+                />
+              </div>
+
+             
 
               {/* Terms checkbox */}
               <div className="flex items-start gap-3">
@@ -312,7 +312,7 @@ export default function SignUpPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-[#1a3a8f]/10 via-transparent to-[#1a3a8f]/5 z-10 pointer-events-none rounded-r-2xl" />
 
             {/* Placeholder image — swap src with real image */}
-            <div className="relative w-full h-full min-h-[520px] overflow-hidden">
+            <div className="relative w-full h-full min-h-[520px] overflow-hidden bg-white p-7">
               <Image
                 src="/auth/signup.svg"
                 alt="Professionals collaborating"

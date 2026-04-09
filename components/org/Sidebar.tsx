@@ -25,17 +25,17 @@ export default function Sidebar({ activeId = "details", onNavigate }: SidebarPro
     };
 
     return (
-        <aside className="w-56 shrink-0 bg-[#E7EFF1] border-r border-gray-100 min-h-full py-3 shadow-sm">
-            <nav className="flex flex-col gap-0.5 px-3 py-7">
+        <aside className="w-72 shrink-0 bg-[#E7EFF1] border-r border-gray-100 min-h-full py-3 shadow-sm">
+            <nav className="flex flex-col gap-0.5 px-7 py-7">
                 {navItems.map((item) => (
                     <Link
                         key={item.id}
                         href={item.href}
                         onClick={() => handleClick(item.id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150 no-underline ${
+                        className={`w-full text-left px-3 py-2.5 rounded-xs text-sm font-medium transition-all duration-150 no-underline ${
                             active === item.id
-                                ? "bg-[#1a3a8f]/8 text-[#1a3a8f] font-semibold border-l-[3px] border-[#1a3a8f] pl-[10px]"
-                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-[3px] border-transparent"
+                                ? "bg-white text-[#1a3a8f]  pl-[10px]"
+                                : "text-black hover:bg-white hover:text-gray-900 "
                         }`}
                     >
                         {item.label}

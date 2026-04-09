@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login, clearError } from "@/store/actions/authActions";
 import { useRouter } from "next/navigation";
-
+import Link from "next/link";
 export default function LoginPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -36,7 +36,17 @@ export default function LoginPage() {
 
     const result = await dispatch(login(form));
     if (login.fulfilled.match(result)) {
-      router.push("/organization");
+      const userData = result.payload?.data;
+      const roles = (userData as any)?.roles || [];
+
+      // Check user role and redirect accordingly
+      if (roles.includes("COMPANY_ADMIN")) {
+        router.push("/organization");
+      } else if (roles.includes("EMPLOYEE")) {
+        router.push("/employee");
+      } else {
+        router.push("/organization");
+      }
     }
   };
 
@@ -44,7 +54,7 @@ export default function LoginPage() {
     <div className="min-h-screen  flex flex-col w-full">
       {/* ── HEADER ── */}
       <header className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className=" px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
             <Image src="/logo.png" alt="Logo" width={150} height={20} />
@@ -56,7 +66,7 @@ export default function LoginPage() {
             <span className="text-gray-500 hidden sm:inline">Do not have a Razonova account?</span>
             <a
               href="/signup"
-              className="text-[#1a3a8f] font-bold tracking-widest text-xs uppercase border border-[#1a3a8f] px-4 py-1.5 rounded hover:bg-[#1a3a8f] hover:text-white transition-colors duration-200"
+              className="text-[#1a3a8f] font-bold tracking-widest text-xs uppercase border border-[#1a3a8f] px-4 py-1.5 rounded transition-colors duration-200"
             >
               Sign Up
             </a>
@@ -65,18 +75,18 @@ export default function LoginPage() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full rounded-2xl max-w-7xl overflow-hidden flex flex-col lg:flex-row justify-center items-center">
+      <main className="flex-1  flex items-center justify-center px-4 py-10">
+        <div className="w-full p-8 bg-white min-h-fit max-w-7xl gap-4 rounded-lg overflow-hidden flex flex-col lg:flex-row justify-center items-center">
 
           {/* ── LEFT: FORM PANEL ── */}
-          <div className="w-full lg:w-[55%] p-8 sm:p-10 xl:p-14 flex flex-col justify-center">
+          <div className="w-full lg:w-[50%] flex flex-col justify-center">
             {/* Mini brand */}
             <div className="flex items-center gap-2 mb-6">
               <Image src="/logo.png" alt="Logo" width={200} height={34} className="rounded-sm" />
 
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight mb-7">
+            <h1 className="text-xl font-extrabold text-gray-900 mb-1 tracking-tight mb-7">
               Welcome Back
             </h1>
 
@@ -148,7 +158,7 @@ export default function LoginPage() {
               <button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="w-full bg-[#0445AD] text-white font-bold tracking-widest text-sm uppercase py-3.5 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#0445AD] text-white font-bold tracking-widest text-sm uppercase py-4 rounded-sm transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Logging in..." : "Login Now"}
               </button>
@@ -190,13 +200,14 @@ export default function LoginPage() {
                 </svg>
               </button>
             </div>
+            <span className="text-xs text-[#434343] mt-3">Don’t have a Razonova account? <Link href='/signup'><span className="text-[#0445AD] font-semibold">SIGN UP</span></Link> </span>
           </div>
 
           {/* ── RIGHT: IMAGE PANEL ── */}
           <div className="hidden lg:flex lg:w-[45%] relative items-stretch">
 
             {/* Placeholder image — swap src with real image */}
-            <div className="relative w-full h-full min-h-[520px] overflow-hidden">
+            <div className="relative w-full h-full  overflow-hidden">
               <Image
                 src="/auth/login.svg"
                 alt="Professionals collaborating"
