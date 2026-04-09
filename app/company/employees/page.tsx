@@ -398,6 +398,17 @@ export default function EmployeesPage() {
         <div className="mb-6 employee-item">
           <div className="flex gap-4 border-b-2 border-gray-200">
             <button
+              onClick={() => setActiveTab('add')}
+              className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
+                activeTab === 'add'
+                  ? 'text-[#0445AD] border-b-2 border-black'
+                  : 'text-gray-500 hover:text-[#0445AD]'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              Add Employee
+            </button>
+            <button
               onClick={() => setActiveTab('pending')}
               className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
                 activeTab === 'pending'
@@ -423,17 +434,7 @@ export default function EmployeesPage() {
             >
               Employee List
             </button>
-            <button
-              onClick={() => setActiveTab('add')}
-              className={`px-6 py-3 font-semibold transition-all duration-300 flex items-center gap-2 ${
-                activeTab === 'add'
-                  ? 'text-[#0445AD] border-b-2 border-black'
-                  : 'text-gray-500 hover:text-[#0445AD]'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              Add Employee
-            </button>
+            
           </div>
         </div>
 
