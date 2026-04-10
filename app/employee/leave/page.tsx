@@ -68,8 +68,7 @@ const getUpcomingHolidays = (cal: HolidayCalendar | null): Holiday[] => {
   const today = new Date();
   return (cal.holidays as Holiday[])
     .filter((h) => new Date(h.date) >= today)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
 
 export default function EmployeeLeavePage() {
@@ -235,7 +234,6 @@ export default function EmployeeLeavePage() {
           {([
             { key: 'balances', label: 'Leave Balances' },
             { key: 'requests', label: 'My Requests' },
-            { key: 'upcoming', label: 'Upcoming Leave' },
             { key: 'holidays', label: 'Upcoming Holidays' },
           ] as const).map(({ key, label }) => (
             <button
@@ -485,62 +483,7 @@ export default function EmployeeLeavePage() {
         </div>
       )}
 
-      {/* Upcoming Leave Tab */}
-      {activeTab === 'upcoming' && (
-        <div className="space-y-4">
-          {upcomingLeaveRequests.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No upcoming approved leave</p>
-              <p className="text-xs text-gray-400 mt-1">Your upcoming approved leave will appear here</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcomingLeaveRequests.map((req) => {
-                const start = new Date(req.startDate);
-                const end = new Date(req.endDate);
-                const daysUntil = Math.ceil((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                return (
-                  <div key={req.id} className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-800">{req.leaveTypeName || 'Leave'}</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          {' – '}
-                          {end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </p>
-                      </div>
-                      <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${daysUntil <= 7 ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {daysUntil}d away
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">Duration</p>
-                        <p className="text-sm font-bold text-gray-800">{req.totalDays} day{req.totalDays !== 1 ? 's' : ''}</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-3 text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">Status</p>
-                        <p className={`text-xs font-bold ${
-                          req.status === 'APPROVED' ? 'text-green-600' :
-                          req.status === 'PARTIALLY_APPROVED' ? 'text-blue-600' :
-                          'text-gray-600'
-                        }`}>
-                          {formatStatus(req.status || '')}
-                        </p>
-                      </div>
-                    </div>
-                    {req.reason && (
-                      <p className="mt-3 text-xs text-gray-500 line-clamp-2">{req.reason}</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+     
 
       {/* Holidays Tab */}
       {activeTab === 'holidays' && (
@@ -552,46 +495,57 @@ export default function EmployeeLeavePage() {
               <p className="text-xs text-gray-400 mt-1">Your organization has not configured a holiday calendar yet</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      {['Holiday', 'Date', 'Day', 'Type'].map((h) => (
-                        <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase px-4 py-3">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {upcomingHolidays.map((h) => {
-                      const d = new Date(h.date);
-                      const isOptional = h.isOptional;
-                      return (
-                        <tr key={h.id} className="hover:bg-gray-50 transition">
-                          <td className="py-3 px-4 text-sm font-medium text-gray-800">{h.name}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{d.toLocaleDateString('en-US', { weekday: 'long' })}</td>
-                          <td className="py-3 px-4">
-                            {isOptional ? (
-                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Optional</span>
-                            ) : (
-                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-700">Holiday</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <>
+              {/* Calendar banner */}
               {activeHolidayCalendar && (
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500">
-                  Calendar: <span className="font-semibold">{activeHolidayCalendar.name}</span>
-                  {activeHolidayCalendar.country && ` • ${activeHolidayCalendar.country}`}
-                  {activeHolidayCalendar.year && ` • ${activeHolidayCalendar.year}`}
+                <div className="bg-white rounded-2xl border border-gray-200 px-5 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-semibold text-gray-700">{activeHolidayCalendar.name}</span>
+                    {activeHolidayCalendar.country && (
+                      <span className="text-xs text-gray-400">· {activeHolidayCalendar.country}</span>
+                    )}
+                    <span className="text-xs text-gray-400">· {activeHolidayCalendar.year}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{upcomingHolidays.length} upcoming</span>
                 </div>
               )}
-            </div>
+              {/* Holiday cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {upcomingHolidays.map((h) => {
+                  const d = new Date(h.date);
+                  const daysUntil = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                  const isPast = daysUntil < 0;
+                  return (
+                    <div key={h.id} className={`bg-white rounded-2xl border p-5 hover:shadow-md transition ${isPast ? 'opacity-60' : ''}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="w-10 h-10 bg-pink-50 rounded-xl flex items-center justify-center shrink-0">
+                          <Star className="w-5 h-5 text-pink-500" />
+                        </div>
+                        <div className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          isPast ? 'bg-gray-100 text-gray-500' :
+                          daysUntil <= 7 ? 'bg-orange-100 text-orange-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {isPast ? 'Past' : daysUntil === 0 ? 'Today' : `${daysUntil}d away`}
+                        </div>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-800 mb-1">{h.name}</h3>
+                      <p className="text-xs text-gray-500 mb-1">
+                        {d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                      <div className="mt-2">
+                        {h.isOptional ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Optional</span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-50 text-pink-600">Holiday</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       )}

@@ -592,7 +592,7 @@ export const fetchActiveHolidayCalendar = createAsyncThunk<HolidayCalendar | nul
       });
       const data = await res.json();
       if (!res.ok) return rejectWithValue(data.message || "Failed to fetch active holiday calendar");
-      return data.data || data.holidays ? data : null;
+      return data.data ? data.data : null;
     } catch {
       return rejectWithValue("Network error. Please try again.");
     }
