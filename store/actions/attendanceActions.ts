@@ -6,6 +6,7 @@ export interface AttendanceConfig {
   graceMinutes: number;
   halfDayMinutes: number;
   fullDayMinutes: number;
+  workingDays?: string[]; // ["MON", "TUE", "WED", "THU", "FRI"]
 }
 
 export interface AttendanceRecord {
@@ -16,7 +17,7 @@ export interface AttendanceRecord {
   date: string;
   checkIn?: string;
   checkOut?: string;
-  status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "PENDING";
+  status: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "ON_LEAVE" | "HOLIDAY" | "WEEK_OFF" | "PENDING";
   hoursWorked?: string;
   remarks?: string;
   // API response fields

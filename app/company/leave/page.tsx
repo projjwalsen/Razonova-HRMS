@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   Calendar,
   CalendarDays,
+  CalendarCheck,
   Check,
   CheckCircle,
   Download,
@@ -15,14 +16,16 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Shield,
+  TrendingUp,
+  Wallet,
+  Users,
   X,
   XCircle,
   AlertCircle,
   Layers,
-  TrendingUp,
-  Shield,
-  CalendarCheck,
   Briefcase,
+  Clock,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -55,6 +58,9 @@ import {
   fetchLeaveRequests,
   approveLeaveRequest,
   rejectLeaveRequest,
+  // User Options
+  fetchUserSelectOptions,
+  applyLeaveOnBehalf,
   // State
   clearLeaveError,
   clearLeaveSuccess,
@@ -73,9 +79,10 @@ import {
   PolicyRule,
   ApprovalLevel,
   Holiday,
+  UserSelectOption,
 } from '@/store/actions/leaveActions';
 
-type Section = 'dashboard' | 'types' | 'policies' | 'approval' | 'calendars' | 'workweek' | 'myleave' | 'requests';
+type Section = 'dashboard' | 'balances' | 'types' | 'policies' | 'approval' | 'calendars' | 'workweek' | 'myleave' | 'requests';
 
 const TYPE_CODE_OPTIONS: { value: LeaveTypeCode; label: string }[] = [
   { value: 'CASUAL', label: 'Casual Leave' },
@@ -146,7 +153,7 @@ function Modal({ open, onClose, title, children, size = 'max-w-lg' }: {
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40">
       <div className={`bg-white rounded-xl shadow-2xl w-full ${size} mx-4 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl z-10">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
@@ -268,6 +275,7 @@ export default function LeavePage() {
     dispatch(fetchHolidayCalendars());
     dispatch(fetchWorkWeek());
     dispatch(fetchLeaveRequests());
+    dispatch(fetchMyBalances());
   }, [dispatch]);
 
   // Fetch employee data
@@ -312,6 +320,7 @@ export default function LeavePage() {
   // ===== SECTION NAVIGATION =====
   const sections: { key: Section; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: TrendingUp },
+    { key: 'balances', label: 'Leave Balance', icon: Wallet },
     { key: 'myleave', label: 'My Leave', icon: CalendarCheck },
     { key: 'types', label: 'Leave Types', icon: Layers, adminOnly: true },
     { key: 'policies', label: 'Leave Policies', icon: Briefcase, adminOnly: true },
@@ -369,6 +378,7 @@ export default function LeavePage() {
         {error && toast(error, 'error')}
 
         {section === 'dashboard' && <DashboardSection {...{ leaveRequests, leaveTypes, leavePolicies, holidayCalendars, myBalances, isAdmin: !!isAdmin, pendingCount: leaveRequests.filter((r) => r.status === 'PENDING').length, onApply: () => setSection('myleave') }} />}
+        {section === 'balances' && <LeaveBalancesSection myBalances={myBalances} loading={loading} />}
         {section === 'types' && isAdmin && <LeaveTypesSection />}
         {section === 'policies' && isAdmin && <LeavePoliciesSection leaveTypes={leaveTypes} />}
         {section === 'approval' && isAdmin && <ApprovalPoliciesSection leavePolicies={leavePolicies} leaveTypes={leaveTypes} />}
@@ -436,7 +446,7 @@ function DashboardSection({ leaveRequests, leaveTypes, leavePolicies, holidayCal
           {myBalances.slice(0, 4).map((b) => (
             <div key={b.leaveTypeId} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">{b.leaveTypeName}</span>
+                <span className="text-sm font-medium text-gray-600">{b.leaveType?.name || b.leaveTypeName}</span>
                 <CalendarDays className="w-5 h-5 text-blue-600" />
               </div>
               <div className="text-2xl font-bold text-gray-900 mb-1">{b.available}</div>
@@ -444,12 +454,12 @@ function DashboardSection({ leaveRequests, leaveTypes, leavePolicies, holidayCal
               <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-600 rounded-full transition-all"
-                  style={{ width: `${b.allocated > 0 ? Math.round((b.used / b.allocated) * 100) : 0}%` }}
+                  style={{ width: `${(b.allocatedDays ?? b.allocated ?? 0) > 0 ? Math.round(((b.usedDays ?? b.used ?? 0) / (b.allocatedDays ?? b.allocated ?? 0)) * 100) : 0}%` }}
                 />
               </div>
               <div className="flex justify-between mt-1.5 text-xs text-gray-400">
-                <span>{b.used} used</span>
-                <span>{b.allocated} total</span>
+                <span>{b.usedDays ?? b.used ?? 0} used</span>
+                <span>{b.allocatedDays ?? b.allocated ?? 0} total</span>
               </div>
             </div>
           ))}
@@ -489,7 +499,7 @@ function DashboardSection({ leaveRequests, leaveTypes, leavePolicies, holidayCal
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{r.employeeName || r.user?.name || '—'}</p>
-                  <p className="text-xs text-gray-400">{r.leaveTypeName} · {formatDate(r.startDate)} – {formatDate(r.endDate)}</p>
+                  <p className="text-xs text-gray-400">{r.leaveType?.name || r.leaveTypeName} · {formatDate(r.startDate)} – {formatDate(r.endDate)}</p>
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${STATUS_COLORS[r.status || '']}`}>
                   {r.status}
@@ -554,6 +564,150 @@ function DashboardSection({ leaveRequests, leaveTypes, leavePolicies, holidayCal
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ===== LEAVE BALANCES SECTION =====
+function LeaveBalancesSection({ myBalances, loading }: { myBalances: LeaveBalance[]; loading: boolean }) {
+  const dispatch = useAppDispatch();
+  const totalAllocated = myBalances.reduce((s, b) => s + (b.allocatedDays ?? b.allocated ?? 0), 0);
+  const totalUsed = myBalances.reduce((s, b) => s + (b.usedDays ?? b.used ?? 0), 0);
+  const totalAvailable = myBalances.reduce((s, b) => s + (b.remainingDays ?? b.available ?? 0), 0);
+  const totalTaken = myBalances.reduce((s, b) => s + (b.takenDays ?? 0), 0);
+  const totalCarryFwd = myBalances.reduce((s, b) => s + (b.carriedForwardDays ?? b.carryForward ?? 0), 0);
+
+  const BALANCE_COLORS = [
+    'from-blue-500 to-blue-600',
+    'from-green-500 to-green-600',
+    'from-purple-500 to-purple-600',
+    'from-orange-500 to-orange-600',
+    'from-pink-500 to-pink-600',
+    'from-teal-500 to-teal-600',
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Leave Balance</h2>
+          <p className="text-sm text-gray-500">Your current leave balances and usage summary</p>
+        </div>
+        <button
+          onClick={() => {
+            dispatch(fetchMyBalances());
+            dispatch(fetchLeaveTypes());
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          { label: 'Allocated', value: totalAllocated, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Taken', value: totalTaken, color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Used', value: totalUsed, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'Remaining', value: totalAvailable, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Carried Forward', value: totalCarryFwd, color: 'text-orange-600', bg: 'bg-orange-50' },
+        ].map(({ label, value, color, bg }) => (
+          <div key={label} className={`${bg} rounded-xl border border-transparent p-4 text-center`}>
+            <div className={`text-3xl font-bold ${color}`}>{value}</div>
+            <div className="text-xs text-gray-500 mt-1">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Year Banner */}
+      {myBalances[0]?.year && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+          <Calendar className="w-4 h-4" />
+          <span className="font-semibold">Year:</span>
+          <span>{myBalances[0].year}</span>
+        </div>
+      )}
+
+      {/* Balance Cards */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-52 bg-gray-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      ) : myBalances.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <CalendarDays className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-semibold">No leave balances found</p>
+          <p className="text-xs text-gray-400 mt-1">Leave balances will appear once your organization configures policies</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {myBalances.map((b, idx) => {
+            const allocated = b.allocatedDays ?? b.allocated ?? 0;
+            const used = b.usedDays ?? b.used ?? 0;
+            const remaining = b.remainingDays ?? b.available ?? 0;
+            const taken = b.takenDays ?? 0;
+            const carriedForward = b.carriedForwardDays ?? b.carryForward ?? 0;
+            const pct = allocated > 0 ? Math.min(100, (used / allocated) * 100) : 0;
+            const color = BALANCE_COLORS[idx % BALANCE_COLORS.length];
+            const name = b.leaveType?.name || b.leaveTypeName || '—';
+            const typeCode = b.leaveType?.typeCode || b.leaveTypeCode;
+            return (
+              <div key={b.leaveTypeId} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition">
+                {/* Top */}
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{name}</p>
+                    {typeCode && (
+                      <span className="inline-block mt-0.5 px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs font-medium">
+                        {typeCode}
+                      </span>
+                    )}
+                  </div>
+                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm`}>
+                    <CalendarCheck className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+
+                {/* Remaining Count */}
+                <div className="mb-3">
+                  <span className="text-3xl font-bold text-gray-900">{remaining}</span>
+                  <span className="text-sm text-gray-400 ml-1">/ {allocated} days</span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-3">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-500`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'Allocated', value: allocated },
+                    { label: 'Taken', value: taken },
+                    { label: 'Used', value: used },
+                    { label: 'Carry Fwd', value: carriedForward },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between px-2 py-1.5 bg-gray-50 rounded-lg">
+                      <span className="text-xs text-gray-500">{label}</span>
+                      <span className="text-xs font-bold text-gray-700">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -655,18 +809,42 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
   const dispatch = useAppDispatch();
   const { leavePolicies, loading, submitting } = useAppSelector((s) => s.leave);
   const [showModal, setShowModal] = useState(false);
+  const [editItem, setEditItem] = useState<LeavePolicy | null>(null);
+  const [detailPolicy, setDetailPolicy] = useState<LeavePolicy | null>(null);
   const [form, setForm] = useState({
     name: '', employmentType: 'FULL_TIME' as EmploymentType, probationMonths: 0, isActive: true,
   });
   const [rules, setRules] = useState<PolicyRule[]>([]);
 
   const openCreate = () => {
+    setEditItem(null);
     setForm({ name: '', employmentType: 'FULL_TIME', probationMonths: 0, isActive: true });
     setRules([{
       leaveTypeId: '', annualAllocation: 12, maxPerRequest: 3, maxPerYear: 12, maxConsecutiveDays: 5,
-      allowDuringProbation: false, attachmentRequired: false, priorNoticeDays: 1, sandwichLeaveAllowed: false,
+      allowDuringProbation: true, attachmentRequired: false, priorNoticeDays: 1, sandwichLeaveAllowed: false,
       countMode: 'WORKING_DAYS', isPaid: true, carryForwardAllowed: false, carryForwardLimit: 0,
       accrualFrequency: 'MONTHLY', accrualAmount: 1,
+    }]);
+    setShowModal(true);
+  };
+
+  const openEdit = (p: LeavePolicy) => {
+    setEditItem(p);
+    setForm({
+      name: p.name,
+      employmentType: p.employmentType,
+      probationMonths: p.probationMonths,
+      isActive: p.isActive ?? true,
+    });
+    const rulesToSet = (p.rules ?? []).map((r) => ({
+      ...r,
+      leaveTypeName: r.leaveType?.name ?? r.leaveTypeName ?? '',
+    }));
+    setRules(rulesToSet.length > 0 ? rulesToSet : [{
+      leaveTypeId: '', annualAllocation: 0, maxPerRequest: 0, maxPerYear: 0, maxConsecutiveDays: 0,
+      allowDuringProbation: true, attachmentRequired: false, priorNoticeDays: 0, sandwichLeaveAllowed: false,
+      countMode: 'WORKING_DAYS', isPaid: true, carryForwardAllowed: false, carryForwardLimit: 0,
+      accrualFrequency: 'MONTHLY', accrualAmount: 0,
     }]);
     setShowModal(true);
   };
@@ -674,7 +852,7 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validRules = rules.filter((r) => r.leaveTypeId);
-    const payload = { ...form, rules: validRules };
+    const payload = { ...form, rules: validRules, ...(editItem?.id && { id: editItem.id }) };
     const result = await dispatch(createLeavePolicy(payload as Partial<LeavePolicy>));
     if (createLeavePolicy.fulfilled.match(result)) { setShowModal(false); dispatch(fetchLeavePolicies()); }
   };
@@ -686,10 +864,14 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
   const addRule = () => {
     setRules((prev) => [...prev, {
       leaveTypeId: '', annualAllocation: 0, maxPerRequest: 0, maxPerYear: 0, maxConsecutiveDays: 0,
-      allowDuringProbation: false, attachmentRequired: false, priorNoticeDays: 0, sandwichLeaveAllowed: false,
+      allowDuringProbation: true, attachmentRequired: false, priorNoticeDays: 0, sandwichLeaveAllowed: false,
       countMode: 'WORKING_DAYS', isPaid: true, carryForwardAllowed: false, carryForwardLimit: 0,
       accrualFrequency: 'MONTHLY', accrualAmount: 0,
     }]);
+  };
+
+  const removeRule = (idx: number) => {
+    setRules((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
@@ -711,7 +893,7 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {leavePolicies.map((p) => (
-            <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition">
+            <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer" onClick={() => setDetailPolicy(p)}>
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-gray-900">{p.name}</h3>
@@ -721,15 +903,27 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
                   {p.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <Layers className="w-3.5 h-3.5" /> {p.rules?.length || 0} rule{p.rules?.length !== 1 ? 's' : ''}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <Layers className="w-3.5 h-3.5" /> {p.rules?.length || 0} rule{p.rules?.length !== 1 ? 's' : ''}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Edit</button>
               </div>
+              {p.rules && p.rules.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {p.rules.map((r) => (
+                    <span key={r.id} className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                      {r.leaveType?.name || r.leaveTypeName || '—'} · {r.annualAllocation}d
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Create Leave Policy" size="max-w-3xl">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editItem ? 'Edit Leave Policy' : 'Create Leave Policy'} size="max-w-3xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Field label="Policy Name" required><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Full Time Policy" required /></Field>
@@ -753,18 +947,119 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
                 <Plus className="w-3 h-3" /> Add Rule
               </button>
             </div>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               {rules.map((rule, idx) => (
-                <div key={idx} className="grid grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <Field label="Leave Type" required>
-                    <Select value={rule.leaveTypeId} onChange={(e) => updateRule(idx, { leaveTypeId: e.target.value })}>
-                      <option value="">Select</option>
-                      {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </Select>
-                  </Field>
-                  <Field label="Annual Alloc."><Input type="number" min={0} value={rule.annualAllocation} onChange={(e) => updateRule(idx, { annualAllocation: +e.target.value })} /></Field>
-                  <Field label="Max/Request"><Input type="number" min={0} value={rule.maxPerRequest} onChange={(e) => updateRule(idx, { maxPerRequest: +e.target.value })} /></Field>
-                  <Field label="Max/Year"><Input type="number" min={0} value={rule.maxPerYear} onChange={(e) => updateRule(idx, { maxPerYear: +e.target.value })} /></Field>
+                <div key={idx} className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Rule Header */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-100 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-semibold text-gray-700">Rule {idx + 1}</span>
+                    </div>
+                    <button type="button" onClick={() => removeRule(idx)} className="text-red-400 hover:text-red-600 transition">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-4 space-y-5">
+                    {/* Section 1: Basic Allocation */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Basic Allocation</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <Field label="Leave Type" required>
+                          <Select value={rule.leaveTypeId} onChange={(e) => updateRule(idx, { leaveTypeId: e.target.value })}>
+                            <option value="">Select</option>
+                            {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                          </Select>
+                        </Field>
+                        <Field label="Annual Allocation">
+                          <Input type="number" min={0} value={rule.annualAllocation} onChange={(e) => {
+                            const v = +e.target.value;
+                            updateRule(idx, { annualAllocation: v, maxPerYear: v });
+                          }} />
+                        </Field>
+                        <Field label="Max Per Request">
+                          <Input type="number" min={0} value={rule.maxPerRequest} onChange={(e) => updateRule(idx, { maxPerRequest: +e.target.value })} />
+                        </Field>
+                        <Field label="Max Consecutive Days">
+                          <Input type="number" min={0} value={rule.maxConsecutiveDays} onChange={(e) => updateRule(idx, { maxConsecutiveDays: +e.target.value })} />
+                        </Field>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Leave Counting */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Leave Counting</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <Field label="Count Mode">
+                          <Select value={rule.countMode} onChange={(e) => updateRule(idx, { countMode: e.target.value as 'CALENDAR_DAYS' | 'WORKING_DAYS' })}>
+                            <option value="WORKING_DAYS">Working Days</option>
+                            <option value="CALENDAR_DAYS">Calendar Days</option>
+                          </Select>
+                        </Field>
+                        <Field label="Is Paid">
+                          <div className="flex items-center gap-3 h-full">
+                            <Toggle checked={rule.isPaid} onChange={(v) => updateRule(idx, { isPaid: v })} />
+                            <span className="text-sm text-gray-700">{rule.isPaid ? 'Paid' : 'Unpaid'}</span>
+                          </div>
+                        </Field>
+                        <Field label="Sandwich Leave Allowed">
+                          <div className="flex items-center gap-3 h-full">
+                            <Toggle checked={rule.sandwichLeaveAllowed} onChange={(v) => updateRule(idx, { sandwichLeaveAllowed: v })} />
+                            <span className="text-sm text-gray-700">{rule.sandwichLeaveAllowed ? 'Allowed' : 'Not Allowed'}</span>
+                          </div>
+                        </Field>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Probation & Notice */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Probation &amp; Notice</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <Field label="Allow During Probation">
+                          <div className="flex items-center gap-3 h-full">
+                            <Toggle checked={rule.allowDuringProbation} onChange={(v) => updateRule(idx, { allowDuringProbation: v })} />
+                            <span className="text-sm text-gray-700">{rule.allowDuringProbation ? 'Allowed' : 'Not Allowed'}</span>
+                          </div>
+                        </Field>
+                        <Field label="Prior Notice (Days)">
+                          <Input type="number" min={0} value={rule.priorNoticeDays} onChange={(e) => updateRule(idx, { priorNoticeDays: +e.target.value })} />
+                        </Field>
+                        <Field label="Attachment Required">
+                          <div className="flex items-center gap-3 h-full">
+                            <Toggle checked={rule.attachmentRequired} onChange={(v) => updateRule(idx, { attachmentRequired: v })} />
+                            <span className="text-sm text-gray-700">{rule.attachmentRequired ? 'Required' : 'Not Required'}</span>
+                          </div>
+                        </Field>
+                      </div>
+                    </div>
+
+                    {/* Section 4: Carry Forward & Accrual */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Carry Forward &amp; Accrual</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <Field label="Carry Forward Allowed">
+                          <div className="flex items-center gap-3 h-full">
+                            <Toggle checked={rule.carryForwardAllowed} onChange={(v) => updateRule(idx, { carryForwardAllowed: v })} />
+                            <span className="text-sm text-gray-700">{rule.carryForwardAllowed ? 'Yes' : 'No'}</span>
+                          </div>
+                        </Field>
+                        <Field label="Carry Forward Limit">
+                          <Input type="number" min={0} value={rule.carryForwardLimit} onChange={(e) => updateRule(idx, { carryForwardLimit: +e.target.value })} />
+                        </Field>
+                        <Field label="Accrual Frequency">
+                          <Select value={rule.accrualFrequency} onChange={(e) => updateRule(idx, { accrualFrequency: e.target.value as 'MONTHLY' | 'QUARTERLY' | 'YEARLY' })}>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="QUARTERLY">Quarterly</option>
+                            <option value="YEARLY">Yearly</option>
+                          </Select>
+                        </Field>
+                        <Field label="Accrual Amount (Days)">
+                          <Input type="number" min={0} value={rule.accrualAmount} onChange={(e) => updateRule(idx, { accrualAmount: +e.target.value })} />
+                        </Field>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -772,12 +1067,196 @@ function LeavePoliciesSection({ leaveTypes }: { leaveTypes: LeaveType[] }) {
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={submitting || !form.name} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition">
-              {submitting ? <Spinner size="sm" /> : <Check className="w-4 h-4" />} Create Policy
+              {submitting ? <Spinner size="sm" /> : <Check className="w-4 h-4" />} {editItem ? 'Update Policy' : 'Create Policy'}
             </button>
             <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition">Cancel</button>
           </div>
         </form>
       </Modal>
+
+      {/* Policy Detail Modal */}
+      <PolicyDetailModal policy={detailPolicy} onClose={() => setDetailPolicy(null)} onEdit={() => { if (detailPolicy) { openEdit(detailPolicy); setDetailPolicy(null); } }} />
+    </div>
+  );
+}
+
+// ===== POLICY DETAIL MODAL =====
+function PolicyDetailModal({ policy, onClose, onEdit }: { policy: LeavePolicy | null; onClose: () => void; onEdit: () => void }) {
+  if (!policy) return null;
+
+  const BoolBadge = ({ value }: { value: boolean }) => (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${value ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+      {value ? 'Yes' : 'No'}
+    </span>
+  );
+
+  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-100 flex items-center justify-between rounded-t-xl">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{policy.name}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${policy.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                {policy.isActive ? 'Active' : 'Inactive'}
+              </span>
+              <span className="text-xs text-gray-400">Policy Details</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEdit} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition">
+              Edit Policy
+            </button>
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Policy Overview */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Policy Overview</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Policy Name', value: policy.name },
+                { label: 'Employment Type', value: policy.employmentType.replace('_', ' ') },
+                { label: 'Probation (Months)', value: policy.probationMonths },
+                { label: 'Total Rules', value: policy.rules?.length || 0 },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-1">{label}</p>
+                  <p className="text-sm font-semibold text-gray-900">{value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 mb-1">Created At</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(policy.createdAt)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 mb-1">Updated At</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(policy.updatedAt)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rules */}
+          {(policy.rules ?? []).length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-400">No rules configured</div>
+          ) : (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Rules ({policy.rules?.length})</p>
+              <div className="space-y-4">
+                {policy.rules?.map((rule, idx) => (
+                  <div key={rule.id || idx} className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                    {/* Rule Header */}
+                    <div className="flex items-center gap-2 px-4 py-3 bg-gray-100 border-b border-gray-200">
+                      <Layers className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm font-semibold text-gray-700">
+                        {rule.leaveType?.name || rule.leaveTypeName || '—'}
+                      </span>
+                      <span className="ml-auto px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                        {rule.leaveType?.typeCode || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-4 space-y-4">
+                      {/* Basic Allocation */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Basic Allocation</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Annual Alloc.</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.annualAllocation} days</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Max/Request</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.maxPerRequest} days</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Max/Year</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.maxPerYear} days</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Max Consecutive</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.maxConsecutiveDays} days</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Leave Counting */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Leave Counting</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Count Mode</span>
+                            <span className="text-xs font-semibold text-gray-800">{rule.countMode === 'WORKING_DAYS' ? 'Working Days' : 'Calendar Days'}</span>
+                          </div>
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Is Paid</span>
+                            <BoolBadge value={rule.isPaid} />
+                          </div>
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Sandwich Leave</span>
+                            <BoolBadge value={rule.sandwichLeaveAllowed} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Probation & Notice */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Probation &amp; Notice</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Allow During Probation</span>
+                            <BoolBadge value={rule.allowDuringProbation} />
+                          </div>
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Prior Notice</span>
+                            <span className="text-xs font-semibold text-gray-800">{rule.priorNoticeDays} day{rule.priorNoticeDays !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Attachment Required</span>
+                            <BoolBadge value={rule.attachmentRequired} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Carry Forward & Accrual */}
+                      <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Carry Forward &amp; Accrual</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="flex items-center justify-between bg-white rounded-lg p-2.5 border border-gray-200">
+                            <span className="text-xs text-gray-500">Carry Fwd Allowed</span>
+                            <BoolBadge value={rule.carryForwardAllowed} />
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Carry Fwd Limit</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.carryForwardLimit} days</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Accrual Freq.</p>
+                            <p className="text-sm font-bold text-gray-900 capitalize">{rule.accrualFrequency.toLowerCase()}</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Accrual Amount</p>
+                            <p className="text-sm font-bold text-gray-900">{rule.accrualAmount} days</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -787,33 +1266,89 @@ function ApprovalPoliciesSection({ leavePolicies, leaveTypes }: { leavePolicies:
   const dispatch = useAppDispatch();
   const { approvalPolicies, loading, submitting } = useAppSelector((s) => s.leave);
   const [showModal, setShowModal] = useState(false);
+  const [editItem, setEditItem] = useState<ApprovalPolicy | null>(null);
+  const [detailPolicy, setDetailPolicy] = useState<ApprovalPolicy | null>(null);
+  const [userOptions, setUserOptions] = useState<UserSelectOption[]>([]);
   const [form, setForm] = useState({
-    name: '', leavePolicyId: '', leaveTypeId: '', departmentId: '', designationId: '', isActive: true,
+    name: '', leavePolicyId: '', leaveTypeId: '', isActive: true,
   });
-  const [levels, setLevels] = useState<ApprovalLevel[]>([
+  const [approvalCount, setApprovalCount] = useState(1);
+  const [minApprovals, setMinApprovals] = useState(1);
+  const [approvers, setApprovers] = useState<ApprovalLevel[]>([
     { level: 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 },
   ]);
 
+  const fetchUsers = useCallback(() => {
+    dispatch(fetchUserSelectOptions()).then((result) => {
+      if (fetchUserSelectOptions.fulfilled.match(result)) {
+        setUserOptions(result.payload);
+      }
+    });
+  }, [dispatch]);
+
   const openCreate = () => {
-    setForm({ name: '', leavePolicyId: '', leaveTypeId: '', departmentId: '', designationId: '', isActive: true });
-    setLevels([{ level: 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 }]);
+    setEditItem(null);
+    setForm({ name: '', leavePolicyId: '', leaveTypeId: '', isActive: true });
+    setApprovalCount(1);
+    setMinApprovals(1);
+    setApprovers([{ level: 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 }]);
+    fetchUsers();
     setShowModal(true);
+  };
+
+  const openEdit = (p: ApprovalPolicy) => {
+    setEditItem(p);
+    setForm({
+      name: p.name,
+      leavePolicyId: p.leavePolicyId || '',
+      leaveTypeId: p.leaveTypeId || '',
+      isActive: p.isActive ?? true,
+    });
+    const lvlCount = p.levels?.length || 1;
+    setApprovalCount(lvlCount);
+    setMinApprovals(p.levels?.[0]?.minApprovals || 1);
+    const loadedApprovers: ApprovalLevel[] = (p.levels ?? []).map((l) => ({
+      ...l,
+      approverType: l.approverType,
+      minApprovals: l.minApprovals,
+    }));
+    setApprovers(loadedApprovers.length > 0 ? loadedApprovers : [{ level: 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 }]);
+    fetchUsers();
+    setShowModal(true);
+  };
+
+  // Sync approvers array length when approvalCount changes
+  const handleApprovalCountChange = (count: number) => {
+    setApprovalCount(count);
+    setApprovers((prev) => {
+      if (count > prev.length) {
+        const newApprovers = [...prev];
+        for (let i = prev.length; i < count; i++) {
+          newApprovers.push({ level: i + 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 });
+        }
+        return newApprovers;
+      }
+      return prev.slice(0, count);
+    });
+  };
+
+  const updateApprover = (idx: number, patch: Partial<ApprovalLevel>) => {
+    setApprovers((prev) => prev.map((a, i) => i === idx ? { ...a, ...patch } : a));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validLevels = levels.filter((l) => l.approverType);
-    const payload = { ...form, levels: validLevels };
+    const payload = {
+      ...form,
+      levels: approvers.map((a) => ({
+        ...a,
+        level: a.level,
+        minApprovals,
+      })),
+      ...(editItem?.id && { id: editItem.id }),
+    };
     const result = await dispatch(createApprovalPolicy(payload as Partial<ApprovalPolicy>));
     if (createApprovalPolicy.fulfilled.match(result)) { setShowModal(false); dispatch(fetchApprovalPolicies()); }
-  };
-
-  const updateLevel = (idx: number, patch: Partial<ApprovalLevel>) => {
-    setLevels((prev) => prev.map((l, i) => i === idx ? { ...l, ...patch } : l));
-  };
-
-  const addLevel = () => {
-    setLevels((prev) => [...prev, { level: prev.length + 1, approverType: 'REPORTING_MANAGER', minApprovals: 1 }]);
   };
 
   return (
@@ -833,38 +1368,49 @@ function ApprovalPoliciesSection({ leavePolicies, leaveTypes }: { leavePolicies:
       ) : approvalPolicies.length === 0 ? (
         <EmptyState icon={Shield} title="No approval policies" description="Set up approval chains for leave requests" action={{ label: 'Create Policy', onClick: openCreate }} />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Name', 'Policy', 'Leave Type', 'Levels', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {approvalPolicies.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-5 py-3.5 text-sm font-medium text-gray-900">{p.name}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-500">{p.leavePolicyName || '—'}</td>
-                  <td className="px-5 py-3.5 text-sm text-gray-500">{p.leaveTypeName || '—'}</td>
-                  <td className="px-5 py-3.5"><Badge color="bg-purple-50 text-purple-700">{p.levels?.length || 0} level{p.levels?.length !== 1 ? 's' : ''}</Badge></td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {p.isActive ? 'Active' : 'Inactive'}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {approvalPolicies.map((p) => (
+            <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer" onClick={() => setDetailPolicy(p)}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-purple-100 text-purple-700 rounded-lg flex items-center justify-center">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">{p.name}</h3>
+                    <span className="text-xs text-gray-400">
+                      {p.leavePolicy?.name || p.leavePolicyName || '—'} · {p.leaveType?.name || p.leaveTypeName || '—'}
                     </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {p.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-1 mb-3">
+                {p.levels?.map((l, i) => (
+                  <span key={l.id || i} className="px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-xs font-medium text-gray-600">
+                    L{l.level}: {l.approverType.replace('_', ' ')}
+                    {l.user?.name && ` → ${l.user.name}`}
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {p.levels?.length || 0} level{p.levels?.length !== 1 ? 's' : ''} · Min {p.levels?.[0]?.minApprovals || 1} approval{p.levels?.[0]?.minApprovals !== 1 ? 's' : ''}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Edit</button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Create Approval Policy" size="max-w-2xl">
+      {/* Create / Edit Modal */}
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editItem ? 'Edit Approval Policy' : 'Create Approval Policy'} size="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-5">
           <Field label="Policy Name" required>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Earned Leave Multi-Level Approval" required />
@@ -888,27 +1434,74 @@ function ApprovalPoliciesSection({ leavePolicies, leaveTypes }: { leavePolicies:
             <Toggle checked={form.isActive} onChange={(v) => setForm({ ...form, isActive: v })} />
           </div>
 
+          {/* Approval Chain Settings */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Approval Chain Settings</p>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="No. of Approval Levels">
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={approvalCount}
+                  onChange={(e) => handleApprovalCountChange(+e.target.value)}
+                />
+              </Field>
+              <Field label="Min Approvals Required">
+                <Input
+                  type="number"
+                  min={1}
+                  max={approvalCount}
+                  value={minApprovals}
+                  onChange={(e) => setMinApprovals(+e.target.value)}
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* Approval Levels */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-gray-800">Approval Levels</h4>
-              <button type="button" onClick={addLevel} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
-                <Plus className="w-3 h-3" /> Add Level
-              </button>
+              <h4 className="text-sm font-semibold text-gray-800">Approval Levels ({approvalCount})</h4>
             </div>
-            <div className="space-y-3">
-              {levels.map((level, idx) => (
-                <div key={idx} className="grid grid-cols-3 gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                  <Field label="Level">
-                    <Input type="number" min={1} value={level.level} onChange={(e) => updateLevel(idx, { level: +e.target.value })} />
-                  </Field>
-                  <Field label="Approver Type" required>
-                    <Select value={level.approverType} onChange={(e) => updateLevel(idx, { approverType: e.target.value as LeaveApproverType })}>
-                      {APPROVER_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </Select>
-                  </Field>
-                  <Field label="Min Approvals">
-                    <Input type="number" min={1} value={level.minApprovals} onChange={(e) => updateLevel(idx, { minApprovals: +e.target.value })} />
-                  </Field>
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+              {approvers.map((approver, idx) => (
+                <div key={idx} className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                  {/* Level Header */}
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+                    <Shield className="w-4 h-4 text-purple-500" />
+                    <span className="text-sm font-semibold text-gray-700">Level {idx + 1}</span>
+                  </div>
+                  <div className="p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Approver Type" required>
+                        <Select
+                          value={approver.approverType}
+                          onChange={(e) => updateApprover(idx, { approverType: e.target.value as LeaveApproverType, userId: undefined, userName: undefined })}
+                        >
+                          {APPROVER_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </Select>
+                      </Field>
+                      {approver.approverType === 'SPECIFIC_USER' ? (
+                        <Field label="Select User" required>
+                          <Select
+                            value={approver.userId || ''}
+                            onChange={(e) => {
+                              const selected = userOptions.find((u) => u.id === e.target.value);
+                              updateApprover(idx, { userId: e.target.value, userName: selected?.name });
+                            }}
+                          >
+                            <option value="">Select User</option>
+                            {userOptions.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                          </Select>
+                        </Field>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-sm text-gray-400 italic bg-gray-100 rounded-lg border border-gray-200">
+                          {approver.approverType === 'ROLE' ? 'Select role in approver type' : approver.approverType.replace('_', ' ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -916,12 +1509,171 @@ function ApprovalPoliciesSection({ leavePolicies, leaveTypes }: { leavePolicies:
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={submitting || !form.name} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition">
-              {submitting ? <Spinner size="sm" /> : <Check className="w-4 h-4" />} Create Policy
+              {submitting ? <Spinner size="sm" /> : <Check className="w-4 h-4" />} {editItem ? 'Update Policy' : 'Create Policy'}
             </button>
             <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition">Cancel</button>
           </div>
         </form>
       </Modal>
+
+      {/* Policy Detail Modal */}
+      <ApprovalPolicyDetailModal policy={detailPolicy} onClose={() => setDetailPolicy(null)} onEdit={() => { if (detailPolicy) { openEdit(detailPolicy); setDetailPolicy(null); } }} />
+    </div>
+  );
+}
+
+// ===== APPROVAL POLICY DETAIL MODAL =====
+function ApprovalPolicyDetailModal({ policy, onClose, onEdit }: { policy: ApprovalPolicy | null; onClose: () => void; onEdit: () => void }) {
+  if (!policy) return null;
+
+  const fmt = (d?: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const APPROVER_LABELS: Record<string, string> = {
+    REPORTING_MANAGER: 'Reporting Manager',
+    DEPARTMENT_MANAGER: 'Department Manager',
+    COMPANY_ADMIN: 'Company Admin',
+    SPECIFIC_USER: 'Specific User',
+    ROLE: 'By Role',
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-100 rounded-t-xl flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">{policy.name}</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${policy.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                {policy.isActive ? 'Active' : 'Inactive'}
+              </span>
+              <span className="text-xs text-gray-400">Approval Policy</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEdit} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition">
+              Edit Policy
+            </button>
+            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Policy Overview */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Policy Overview</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Policy Name', value: policy.name },
+                { label: 'Leave Policy', value: policy.leavePolicy?.name || policy.leavePolicyName || 'All' },
+                { label: 'Leave Type', value: policy.leaveType?.name || policy.leaveTypeName || 'All' },
+                { label: 'Employment Type', value: policy.leavePolicy?.employmentType?.replace('_', ' ') || '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-1">{label}</p>
+                  <p className="text-sm font-semibold text-gray-900">{value}</p>
+                </div>
+              ))}
+            </div>
+            {policy.leavePolicy?.probationMonths !== undefined && (
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-1">Probation (Months)</p>
+                  <p className="text-sm font-semibold text-gray-900">{policy.leavePolicy.probationMonths}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-1">Min Approvals</p>
+                  <p className="text-sm font-semibold text-gray-900">{policy.levels?.[0]?.minApprovals || 1}</p>
+                </div>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 mb-1">Created At</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(policy.createdAt)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <p className="text-xs text-gray-400 mb-1">Updated At</p>
+                <p className="text-sm font-semibold text-gray-900">{fmt(policy.updatedAt)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Approval Levels */}
+          {(policy.levels ?? []).length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-400">No approval levels configured</div>
+          ) : (
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Approval Levels ({policy.levels?.length})</p>
+              <div className="space-y-3">
+                {policy.levels?.map((lvl, idx) => (
+                  <div key={lvl.id || idx} className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                    {/* Level Header */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+                      <div className="w-6 h-6 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">
+                        {lvl.level}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-700">Level {lvl.level}</span>
+                      <span className="ml-auto px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                        {APPROVER_LABELS[lvl.approverType] || lvl.approverType}
+                      </span>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Level Details */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                          <p className="text-[10px] text-gray-400 uppercase">Min Approvals</p>
+                          <p className="text-sm font-bold text-gray-900">{lvl.minApprovals}</p>
+                        </div>
+                        {lvl.approverType === 'SPECIFIC_USER' && (
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Selected User</p>
+                            <p className="text-sm font-bold text-gray-900">{lvl.user?.name || lvl.userName || '—'}</p>
+                          </div>
+                        )}
+                        {lvl.approverType === 'ROLE' && lvl.roleId && (
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200">
+                            <p className="text-[10px] text-gray-400 uppercase">Role ID</p>
+                            <p className="text-xs font-bold text-gray-900 truncate">{lvl.roleId}</p>
+                          </div>
+                        )}
+                        {lvl.user?.email && (
+                          <div className="bg-white rounded-lg p-2.5 border border-gray-200 col-span-2">
+                            <p className="text-[10px] text-gray-400 uppercase">User Email</p>
+                            <p className="text-sm font-bold text-gray-900">{lvl.user.email}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Approver User Badge */}
+                      {lvl.user && (
+                        <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                          <div className="w-8 h-8 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                            {(lvl.user.name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{lvl.user.name || '—'}</p>
+                            <p className="text-xs text-gray-400">{lvl.user.email || ''}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Timestamps */}
+                      <div className="flex items-center justify-between text-xs text-gray-400 pt-1 border-t border-gray-100">
+                        <span>Created: {fmt(lvl.createdAt)}</span>
+                        <span>Updated: {fmt(lvl.updatedAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1228,10 +1980,15 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
   loading: boolean; dispatch: any;
 }) {
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showBehalfModal, setShowBehalfModal] = useState(false);
   const [cancelModal, setCancelModal] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [userOptions, setUserOptions] = useState<UserSelectOption[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedUserName, setSelectedUserName] = useState('');
   const [form, setForm] = useState({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
+  const [behalfForm, setBehalfForm] = useState({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const upcomingHolidays = (activeHolidayCalendar?.holidays || [])
@@ -1254,15 +2011,43 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
     if (cancelModal) { onCancel(cancelModal, cancelReason); setCancelModal(null); setCancelReason(''); }
   };
 
+  const openBehalfModal = async () => {
+    setSelectedUserId('');
+    setSelectedUserName('');
+    setBehalfForm({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
+    const result = await dispatch(fetchUserSelectOptions());
+    if (fetchUserSelectOptions.fulfilled.match(result)) {
+      setUserOptions(result.payload);
+    }
+    setShowBehalfModal(true);
+  };
+
+  const handleApplyOnBehalf = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId) return;
+    const result = await dispatch(applyLeaveOnBehalf({
+      userId: selectedUserId,
+      payload: { ...behalfForm, attachments },
+    }));
+    if (applyLeaveOnBehalf.fulfilled.match(result)) {
+      setShowBehalfModal(false);
+      setSelectedUserId('');
+      setSelectedUserName('');
+      setBehalfForm({ leaveTypeId: '', startDate: '', endDate: '', reason: '' });
+      dispatch(fetchLeaveRequests());
+    }
+  };
+
   const daysBetween = (s: string, e: string) => {
     const diff = new Date(e).getTime() - new Date(s).getTime();
     return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
   };
 
   const totalDays = form.startDate && form.endDate ? daysBetween(form.startDate, form.endDate) : 0;
+  const behalfTotalDays = behalfForm.startDate && behalfForm.endDate ? daysBetween(behalfForm.startDate, behalfForm.endDate) : 0;
 
   const filteredRequests = myRequests.filter((r) =>
-    (r.leaveTypeName || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (r.leaveType?.name || r.leaveTypeName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -1272,9 +2057,14 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
           <h2 className="text-lg font-bold text-gray-900">My Leave</h2>
           <p className="text-sm text-gray-500">View your leave balance, apply for leave, and track requests</p>
         </div>
-        <button onClick={() => setShowApplyModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
-          <Plus className="w-4 h-4" /> Apply for Leave
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openBehalfModal} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition shadow-sm">
+            <Users className="w-4 h-4" /> Apply on Behalf
+          </button>
+          <button onClick={() => setShowApplyModal(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
+            <Plus className="w-4 h-4" /> Apply for Leave
+          </button>
+        </div>
       </div>
 
       {/* Balance Cards */}
@@ -1287,16 +2077,16 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
           {myBalances.map((b) => (
             <div key={b.leaveTypeId} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">{b.leaveTypeName}</span>
+                <span className="text-sm font-medium text-gray-600">{b.leaveType?.name || b.leaveTypeName}</span>
                 <CalendarDays className="w-5 h-5 text-blue-600" />
               </div>
-              <div className="text-2xl font-bold text-gray-900">{b.available} <span className="text-sm font-normal text-gray-400">/ {b.allocated} days</span></div>
+              <div className="text-2xl font-bold text-gray-900">{b.remainingDays ?? b.available ?? 0} <span className="text-sm font-normal text-gray-400">/ {b.allocatedDays ?? b.allocated ?? 0} days</span></div>
               <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-600 rounded-full" style={{ width: `${b.allocated > 0 ? Math.round((b.used / b.allocated) * 100) : 0}%` }} />
+                <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(b.allocatedDays ?? b.allocated ?? 0) > 0 ? Math.round(((b.usedDays ?? b.used ?? 0) / (b.allocatedDays ?? b.allocated ?? 0)) * 100) : 0}%` }} />
               </div>
               <div className="flex justify-between mt-2 text-xs text-gray-400">
-                <span>{b.used} used</span>
-                {b.pending > 0 && <span className="text-yellow-600">{b.pending} pending</span>}
+                <span>{b.usedDays ?? b.used ?? 0} used</span>
+                {(b.pending ?? 0) > 0 && <span className="text-yellow-600">{b.pending} pending</span>}
               </div>
             </div>
           ))}
@@ -1349,7 +2139,7 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
             <tbody className="divide-y divide-gray-50">
               {filteredRequests.map((r) => (
                 <tr key={r.id} className="hover:bg-gray-50/50 transition">
-                  <td className="px-5 py-3.5 text-sm font-medium text-gray-900">{r.leaveTypeName || '—'}</td>
+                  <td className="px-5 py-3.5 text-sm font-medium text-gray-900">{r.leaveType?.name || r.leaveTypeName || '—'}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-600">{formatDate(r.startDate)}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-600">{formatDate(r.endDate)}</td>
                   <td className="px-5 py-3.5 text-sm font-semibold text-gray-900">{r.totalDays || 0}</td>
@@ -1410,6 +2200,78 @@ function MyLeaveSection({ myBalances, myRequests, leaveTypes, activeHolidayCalen
         </form>
       </Modal>
 
+      {/* Apply on Behalf Modal */}
+      <Modal open={showBehalfModal} onClose={() => setShowBehalfModal(false)} title="Apply Leave on Behalf" size="max-w-lg">
+        <form onSubmit={handleApplyOnBehalf} className="space-y-4">
+          <div className="p-3 bg-purple-50 border border-purple-100 rounded-lg flex items-start gap-2">
+            <Users className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-purple-700">Apply leave on behalf of an employee. The leave will be submitted from their account.</p>
+          </div>
+
+          <Field label="Select Employee" required>
+            <Select
+              value={selectedUserId}
+              onChange={(e) => {
+                const selected = userOptions.find((u) => u.id === e.target.value);
+                setSelectedUserId(e.target.value);
+                setSelectedUserName(selected?.name || '');
+              }}
+            >
+              <option value="">Select Employee</option>
+              {userOptions.map((u) => <option key={u.id} value={u.id}>{u.name} </option>)}
+            </Select>
+          </Field>
+
+          {selectedUserId && (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-3">
+              <div className="w-8 h-8 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">
+                {getInitials(selectedUserName)}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{selectedUserName}</p>
+                <p className="text-xs text-gray-400">{userOptions.find((u) => u.id === selectedUserId)?.email}</p>
+              </div>
+            </div>
+          )}
+
+          <Field label="Leave Type" required>
+            <Select value={behalfForm.leaveTypeId} onChange={(e) => setBehalfForm({ ...behalfForm, leaveTypeId: e.target.value })}>
+              <option value="">Select Leave Type</option>
+              {leaveTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Start Date" required><Input type="date" value={behalfForm.startDate} onChange={(e) => setBehalfForm({ ...behalfForm, startDate: e.target.value })} required /></Field>
+            <Field label="End Date" required><Input type="date" value={behalfForm.endDate} onChange={(e) => setBehalfForm({ ...behalfForm, endDate: e.target.value })} required /></Field>
+          </div>
+          {behalfTotalDays > 0 && (
+            <div className="px-3 py-2 bg-blue-50 rounded-lg text-xs text-blue-700 flex items-center gap-2">
+              <Info className="w-3.5 h-3.5 shrink-0" />
+              {behalfTotalDays} calendar day{behalfTotalDays !== 1 ? 's' : ''} selected
+            </div>
+          )}
+          <Field label="Reason" required>
+            <textarea value={behalfForm.reason} onChange={(e) => setBehalfForm({ ...behalfForm, reason: e.target.value })} rows={3} className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Brief reason for leave" required />
+          </Field>
+          <div>
+            <Field label="Attachments" hint="Up to 5 files, max 5MB each">
+              <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setAttachments(Array.from(e.target.files || []))} className="text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 file:text-xs file:font-semibold hover:file:bg-blue-100 cursor-pointer" />
+            </Field>
+            {attachments.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {attachments.map((f, i) => <span key={i} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">{f.name}</span>)}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={submitting || !selectedUserId || !behalfForm.leaveTypeId || !behalfForm.startDate || !behalfForm.endDate || !behalfForm.reason} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 disabled:opacity-50 transition">
+              {submitting ? <Spinner size="sm" /> : <Users className="w-4 h-4" />} Submit for {selectedUserName || 'Employee'}
+            </button>
+            <button type="button" onClick={() => setShowBehalfModal(false)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition">Cancel</button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Cancel Modal */}
       <Modal open={!!cancelModal} onClose={() => setCancelModal(null)} title="Cancel Leave Request" size="max-w-sm">
         <div className="space-y-4">
@@ -1442,7 +2304,7 @@ function LeaveRequestsSection({ leaveRequests, leaveTypes, actionLoading, loadin
 
   const filtered = leaveRequests.filter((r) => {
     if (search && !(r.employeeName || r.user?.name || '').toLowerCase().includes(search.toLowerCase()) &&
-        !(r.leaveTypeName || '').toLowerCase().includes(search.toLowerCase())) return false;
+        !(r.leaveType?.name || r.leaveTypeName || '').toLowerCase().includes(search.toLowerCase())) return false;
     if (statusFilter && r.status !== statusFilter) return false;
     if (typeFilter && r.leaveTypeId !== typeFilter) return false;
     return true;
@@ -1508,11 +2370,11 @@ function LeaveRequestsSection({ leaveRequests, leaveTypes, actionLoading, loadin
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{r.leaveTypeName || '—'}</td>
+                  <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{r.leaveType?.name || r.leaveTypeName || '—'}</td>
                   <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(r.startDate)} – {formatDate(r.endDate)}</td>
                   <td className="px-4 py-3.5 text-sm font-semibold text-gray-900">{r.totalDays || 0}</td>
                   <td className="px-4 py-3.5"><span className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${STATUS_COLORS[r.status || '']}`}>{r.status}</span></td>
-                  <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">Level {r.currentLevel || 1}</td>
+                  <td className="px-4 py-3.5 text-sm text-gray-500 whitespace-nowrap">Level {r.currentApprovalLevel ?? 1}</td>
                   <td className="px-4 py-3.5 text-sm text-gray-400 whitespace-nowrap">{formatDate(r.createdAt || '')}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5">
@@ -1629,14 +2491,14 @@ function RequestDetailDrawer({ request, onClose }: { request: LeaveRequest; onCl
               <div className="space-y-2">
                 {request.approvals.map((a, i) => (
                   <div key={a.id || i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${a.status === 'APPROVED' ? 'bg-green-100 text-green-700' : a.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-500'}`}>
-                      {a.status === 'APPROVED' ? <Check className="w-3 h-3" /> : a.status === 'REJECTED' ? <X className="w-3 h-3" /> : a.level}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${a.decision === 'APPROVED' ? 'bg-green-100 text-green-700' : a.decision === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-500'}`}>
+                      {a.decision === 'APPROVED' ? <Check className="w-3 h-3" /> : a.decision === 'REJECTED' ? <X className="w-3 h-3" /> : a.level}
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-800">{a.approverName || `Level ${a.level}`}</p>
+                      <p className="text-xs font-medium text-gray-800">{a.approver?.name || `Level ${a.level}`}</p>
                       {a.remarks && <p className="text-xs text-gray-400">{a.remarks}</p>}
                     </div>
-                    <span className="text-xs text-gray-400">{a.actionAt ? formatDate(a.actionAt) : 'Pending'}</span>
+                    <span className="text-xs text-gray-400">{a.actedAt ? formatDate(a.actedAt) : 'Pending'}</span>
                   </div>
                 ))}
               </div>

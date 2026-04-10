@@ -11,6 +11,9 @@ import {
   Eye,
   X,
   Settings,
+  AlertCircle,
+  Star,
+  Sun,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -73,12 +76,33 @@ export default function AttendancePage() {
 
   // Config form state
   const [configForm, setConfigForm] = useState<AttendanceConfig>({
-    checkInTime: '09:00',
-    checkOutTime: '18:00',
-    graceMinutes: 15,
-    halfDayMinutes: 240,
-    fullDayMinutes: 480,
+    checkInTime: '',
+    checkOutTime: '',
+    graceMinutes: 0,
+    halfDayMinutes: 0,
+    fullDayMinutes: 0,
+    workingDays: [],
   });
+
+  const WEEK_DAYS = [
+    { label: 'Mon', value: 'MONDAY' },
+    { label: 'Tue', value: 'TUESDAY' },
+    { label: 'Wed', value: 'WEDNESDAY' },
+    { label: 'Thu', value: 'THURSDAY' },
+    { label: 'Fri', value: 'FRIDAY' },
+    { label: 'Sat', value: 'SATURDAY' },
+    { label: 'Sun', value: 'SUNDAY' },
+  ];
+
+  const toggleWorkingDay = (day: string) => {
+    const current = configForm.workingDays || [];
+    const updated = current.includes(day)
+      ? current.filter((d) => d !== day)
+      : [...current, day].sort(
+          (a, b) => WEEK_DAYS.findIndex((w) => w.value === a) - WEEK_DAYS.findIndex((w) => w.value === b)
+        );
+    setConfigForm({ ...configForm, workingDays: updated });
+  };
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -217,6 +241,12 @@ export default function AttendancePage() {
         return 'bg-orange-100 text-orange-700';
       case 'PENDING':
         return 'bg-blue-100 text-blue-700';
+      case 'ON_LEAVE':
+        return 'bg-purple-100 text-purple-700';
+      case 'HOLIDAY':
+        return 'bg-pink-100 text-pink-700';
+      case 'WEEK_OFF':
+        return 'bg-gray-200 text-gray-600';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -231,6 +261,14 @@ export default function AttendancePage() {
       case 'ABSENT':
       case 'REJECTED':
         return <XCircle className="w-4 h-4" />;
+      case 'LATE':
+        return <AlertCircle className="w-4 h-4" />;
+      case 'ON_LEAVE':
+        return <Calendar className="w-4 h-4" />;
+      case 'HOLIDAY':
+        return <Star className="w-4 h-4" />;
+      case 'WEEK_OFF':
+        return <Sun className="w-4 h-4" />;
       default:
         return <Clock className="w-4 h-4" />;
     }
@@ -238,7 +276,19 @@ export default function AttendancePage() {
 
   const formatStatus = (status: string) => {
     if (!status) return '';
-    return status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1).toLowerCase();
+    const labels: Record<string, string> = {
+      PRESENT: 'Present',
+      ABSENT: 'Absent',
+      LATE: 'Late',
+      HALF_DAY: 'Half Day',
+      ON_LEAVE: 'On Leave',
+      HOLIDAY: 'Holiday',
+      WEEK_OFF: 'Week Off',
+      PENDING: 'Pending',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+    };
+    return labels[status.toUpperCase()] || status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   const getCalendarDays = () => {
@@ -541,10 +591,44 @@ export default function AttendancePage() {
                 </div>
               </div>
               <div className="mt-6">
+                {/* Working Days */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold mb-3">
+                    Working Days
+                    <span className="text-xs font-normal text-gray-400 ml-2">
+                      Selected days are treated as working days
+                    </span>
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {WEEK_DAYS.map(({ label, value }) => {
+                      const isSelected = (configForm.workingDays || []).includes(value);
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => toggleWorkingDay(value)}
+                          className={`w-14 h-14 rounded-xl font-semibold text-sm transition-all duration-200 border-2 ${
+                            isSelected
+                              ? 'bg-[#0445AD] text-white border-[#0445AD] shadow-md scale-105'
+                              : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-[#0445AD] hover:text-[#0445AD]'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(configForm.workingDays || []).length === 0 && (
+                    <p className="text-xs text-red-500 mt-2">
+                      At least one working day must be selected
+                    </p>
+                  )}
+                </div>
+
                 <button
                   onClick={handleSaveConfig}
-                  disabled={saving}
-                  className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
+                  disabled={saving || (configForm.workingDays || []).length === 0}
+                  className="px-8 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Saving...' : 'Save Configuration'}
                 </button>

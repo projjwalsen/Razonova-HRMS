@@ -46,6 +46,11 @@ export interface PolicyRule {
   carryForwardLimit: number;
   accrualFrequency: LeaveAccrualFrequency;
   accrualAmount: number;
+  leaveType?: {
+    id: string;
+    name?: string;
+    typeCode?: LeaveTypeCode;
+  };
 }
 
 export interface LeavePolicy {
@@ -71,6 +76,14 @@ export interface ApprovalLevel {
   userId?: string;
   userName?: string;
   minApprovals: number;
+  createdAt?: string;
+  updatedAt?: string;
+  role?: Record<string, unknown> | null;
+  user?: {
+    id: string;
+    name?: string;
+    email?: string;
+  } | null;
 }
 
 export interface ApprovalPolicy {
@@ -88,6 +101,21 @@ export interface ApprovalPolicy {
   levels?: ApprovalLevel[];
   createdAt?: string;
   updatedAt?: string;
+  leavePolicy?: {
+    id: string;
+    name: string;
+    employmentType: EmploymentType;
+    probationMonths?: number;
+    isActive?: boolean;
+  };
+  leaveType?: {
+    id: string;
+    name: string;
+    typeCode: LeaveTypeCode;
+    isActive?: boolean;
+  };
+  department?: Record<string, unknown> | null;
+  designation?: Record<string, unknown> | null;
 }
 
 // =============================================
@@ -144,11 +172,15 @@ export interface LeaveRequest {
   attachmentUrls?: string[];
   appliedOn?: string;
   createdAt?: string;
+  updatedAt?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   remarks?: string;
   rejectionReason?: string;
-  currentLevel?: number;
+  currentApprovalLevel?: number;
+  approvalPolicyId?: string;
+  leavePolicyRuleId?: string;
+  tenantId?: string;
   user?: {
     id: string;
     name?: string;
@@ -157,8 +189,32 @@ export interface LeaveRequest {
   leaveType?: {
     id: string;
     name?: string;
+    typeCode?: string;
   };
-  approvals?: ApprovalRecord[];
+  leavePolicy?: {
+    id: string;
+    name?: string;
+    employmentType?: string;
+    probationMonths?: number;
+  };
+  approvals?: LeaveApproval[];
+}
+
+export interface LeaveApproval {
+  id: string;
+  leaveRequestId?: string;
+  level: number;
+  approverId?: string;
+  decision?: string;
+  remarks?: string | null;
+  actedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  approver?: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
 }
 
 export interface ApprovalRecord {
@@ -174,14 +230,31 @@ export interface ApprovalRecord {
 // LEAVE BALANCE
 // =============================================
 export interface LeaveBalance {
+  id?: string;
+  userId?: string;
+  tenantId?: string;
   leaveTypeId: string;
-  leaveTypeName: string;
+  leaveTypeName?: string;
   leaveTypeCode?: LeaveTypeCode;
-  allocated: number;
-  used: number;
-  pending: number;
-  available: number;
+  year?: number;
+  allocatedDays: number;
+  takenDays: number;
+  carriedForwardDays: number;
+  usedDays: number;
+  remainingDays: number;
+  pending?: number;
+  available?: number;
+  allocated?: number;
+  used?: number;
   carryForward?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  leaveType?: {
+    id: string;
+    name?: string;
+    typeCode?: LeaveTypeCode;
+    isActive?: boolean;
+  };
 }
 
 // =============================================
@@ -260,12 +333,6 @@ const authHeaders = () => {
   };
 };
 
-const formDataHeaders = () => {
-  const token = getToken();
-  return {
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
 
 
 // =============================================
@@ -355,6 +422,101 @@ export const createLeavePolicy = createAsyncThunk<LeavePolicy, Partial<LeavePoli
       });
       const data = await res.json();
       if (!res.ok) return rejectWithValue(data.message || "Failed to create leave policy");
+      return data.data || data;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+// =============================================
+// USER SELECT OPTIONS
+// =============================================
+export interface UserSelectOption {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  managerId?: string;
+  isActive?: boolean;
+  employeeCode?: string;
+  employmentType?: string;
+  joiningDate?: string;
+  probationMonths?: number;
+  salary?: number;
+  dateOfBirth?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pinCode?: string;
+  department?: {
+    id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+  designation?: {
+    id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+  manager?: {
+    id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface UpdateUserPayload {
+  name?: string;
+  phone?: string;
+  departmentId?: string;
+  designationId?: string;
+  managerId?: string;
+  isActive?: boolean;
+  employeeCode?: string;
+  employmentType?: string;
+  joiningDate?: string;
+  probationMonths?: number;
+  salary?: number;
+  dateOfBirth?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pinCode?: string;
+}
+
+export const fetchUserSelectOptions = createAsyncThunk<UserSelectOption[], void, { rejectValue: string }>(
+  "leave/fetchUserSelectOptions",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/org/users/select-options`, {
+        method: "GET",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to fetch user options");
+      return Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+export const updateUser = createAsyncThunk<UserSelectOption, { userId: string; payload: UpdateUserPayload }, { rejectValue: string }>(
+  "leave/updateUser",
+  async ({ userId, payload }, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/org/users/update/${userId}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to update user");
       return data.data || data;
     } catch {
       return rejectWithValue("Network error. Please try again.");
@@ -455,6 +617,23 @@ export const createHolidayCalendar = createAsyncThunk<HolidayCalendar, Partial<H
   }
 );
 
+export const deleteHolidayCalendar = createAsyncThunk<string, string, { rejectValue: string }>(
+  "leave/deleteHolidayCalendar",
+  async (calendarId, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/org/leave/holiday-calendar/${calendarId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to delete holiday calendar");
+      return calendarId;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
 export const createHoliday = createAsyncThunk<Holiday, Partial<Holiday>, { rejectValue: string }>(
   "leave/createHoliday",
   async (payload, { rejectWithValue }) => {
@@ -504,6 +683,37 @@ export const updateWorkWeek = createAsyncThunk<WorkWeek, WorkWeek, { rejectValue
       });
       const data = await res.json();
       if (!res.ok) return rejectWithValue(data.message || "Failed to update work week");
+      return data.data || data;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+// =============================================
+// THUNKS - LEAVE APPLY ON BEHALF
+// =============================================
+export const applyLeaveOnBehalf = createAsyncThunk<LeaveRequest, { userId: string; payload: ApplyLeavePayload }, { rejectValue: string }>(
+  "leave/applyOnBehalf",
+  async ({ userId, payload }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("leaveTypeId", payload.leaveTypeId);
+      formData.append("startDate", payload.startDate);
+      formData.append("endDate", payload.endDate);
+      formData.append("reason", payload.reason);
+      if (payload.attachments) {
+        payload.attachments.forEach((f) => formData.append("attachments", f));
+      }
+
+      const token = getToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/org/leave/apply-on-behalf/${userId}`, {
+        method: "POST",
+        headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to apply for leave on behalf");
       return data.data || data;
     } catch {
       return rejectWithValue("Network error. Please try again.");
@@ -728,6 +938,12 @@ const leaveSlice = createSlice({
     builder.addCase(fetchApprovalPolicies.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; })
 
     builder.addCase(createApprovalPolicy.pending, (s) => { s.submitting = true; s.error = null; })
+
+    // ---- User Select Options ----
+    builder.addCase(fetchUserSelectOptions.fulfilled, (s) => { s.loading = false; });
+    builder.addCase(updateUser.pending, (s) => { s.submitting = true; s.error = null; })
+    builder.addCase(updateUser.fulfilled, (s) => { s.submitting = false; })
+    builder.addCase(updateUser.rejected, (s, a) => { s.submitting = false; s.error = a.payload as string; });
     builder.addCase(createApprovalPolicy.fulfilled, (s, a) => {
       s.submitting = false;
       const idx = s.approvalPolicies.findIndex((p) => p.id === a.payload.id);
@@ -751,6 +967,14 @@ const leaveSlice = createSlice({
       s.successMessage = "Holiday calendar created successfully";
     })
     builder.addCase(createHolidayCalendar.rejected, (s, a) => { s.submitting = false; s.error = a.payload as string; })
+
+    builder.addCase(deleteHolidayCalendar.pending, (s) => { s.submitting = true; s.error = null; })
+    builder.addCase(deleteHolidayCalendar.fulfilled, (s, a) => {
+      s.submitting = false;
+      s.holidayCalendars = s.holidayCalendars.filter((c) => c.id !== a.payload);
+      s.successMessage = "Holiday calendar deleted successfully";
+    })
+    builder.addCase(deleteHolidayCalendar.rejected, (s, a) => { s.submitting = false; s.error = a.payload as string; })
 
     builder.addCase(createHoliday.pending, (s) => { s.submitting = true; s.error = null; })
     builder.addCase(createHoliday.fulfilled, (s, a) => {
