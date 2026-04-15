@@ -1,18 +1,61 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-// Pay Structure Component
-export interface PayStructureComponent {
+// =============================================
+// ENUMS
+// =============================================
+
+export type PayrollStatus = 'DRAFT' | 'PROCESSED' | 'DISBURSING' | 'PAID' | 'FAILED' | 'CANCELLED';
+export type PayrollItemType = 'EARNING' | 'ALLOWANCE' | 'DEDUCTION' | 'TAX' | 'BONUS';
+export type PayStructureValueType = 'FLAT' | 'PERCENTAGE_OF_BASIC';
+export type PayrollComponentFreq = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type PayrollComponentType = 'EARNING' | 'ALLOWANCE' | 'DEDUCTION' | 'TAX' | 'BONUS';
+
+// =============================================
+// TYPES - PAYROLL COMPONENT MASTER
+// =============================================
+
+export interface PayrollComponentMaster {
   id?: string;
-  label: string;
-  componentType?: "BASIC" | "HRA" | "DA" | "ALLOWANCE" | "DEDUCTION" | "BONUS" | "OTHER";
-  type?: string;
-  valueType: "FLAT" | "PERCENTAGE";
-  value: number;
+  name: string;
+  type: PayrollComponentType;
+  valueType: PayStructureValueType;
   isTaxable: boolean;
-  attachmentRequired?: boolean;
+  isOptional: boolean;
+  isActive: boolean;
+  frequency?: PayrollComponentFreq;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Pay Structure
+export interface CreateComponentMasterPayload {
+  name: string;
+  type: PayrollComponentType;
+  valueType: PayStructureValueType;
+  isTaxable: boolean;
+  isOptional: boolean;
+  isActive: boolean;
+}
+
+// =============================================
+// TYPES - PAY STRUCTURE
+// =============================================
+
+export interface PayStructureComponent {
+  id?: string;
+  payrollMasterComponentId?: string;   // API field
+  payrollComponentMasterId?: string;   // alias
+  payrollMasterComponent?: PayrollComponentMaster;  // API field
+  componentMaster?: PayrollComponentMaster;         // alias
+  payStructureId?: string;
+  valueType: PayStructureValueType;
+  value: number;
+  isActive: boolean;
+  remarks?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface PayStructure {
   id?: string;
   name: string;
@@ -21,533 +64,957 @@ export interface PayStructure {
   designationId?: string;
   designationName?: string;
   isDefault: boolean;
+  isActive: boolean;
   components: PayStructureComponent[];
   createdAt?: string;
   updatedAt?: string;
+  // API nested objects
+  department?: { id: string; name: string };
+  designation?: { id: string; name: string };
 }
 
-// Transform PayStructure API response
-const transformPayStructure = (record: any): PayStructure => {
-  return {
-    ...record,
-    components: record.components || [],
-  };
-};
+export interface CreatePayStructurePayload {
+  name: string;
+  departmentId?: string;
+  designationId?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  components: PayStructureComponent[];
+}
 
-// Payroll Item (earnings/deductions for processed payroll)
+// =============================================
+// TYPES - EMPLOYEE PAYROLL COMPONENTS
+// =============================================
+
+export interface EmployeePayrollComponent {
+  id?: string;
+  // API uses payrollMasterComponentId / payrollMasterComponent
+  payrollMasterComponentId?: string;
+  payrollMasterComponent?: PayrollComponentMaster;
+  // Aliases for backward compat
+  payrollComponentMasterId?: string;
+  componentMaster?: PayrollComponentMaster;
+  payStructureId?: string;
+  valueType: PayStructureValueType;
+  value: number;
+  isActive: boolean;
+  remarks?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface EmployeePayrollOverride {
+  userId: string;
+  employeeName?: string;
+  components: EmployeePayrollComponent[];
+}
+
+// Full employee payroll data — includes base structure + overrides + computed salary
+export interface EmployeePayrollComponentsDetail {
+  userId: string;
+  employeeName?: string;
+  employeeCode?: string;
+  baseSalary?: number;
+  grossSalary?: number;
+  netSalary?: number;
+  payStructure?: PayStructure;
+  overrides?: EmployeePayrollComponent[];
+  components?: (EmployeePayrollComponent & { componentMaster?: PayrollComponentMaster })[];
+}
+
+// =============================================
+// TYPES - PAYROLL ITEMS
+// =============================================
+
 export interface PayrollItem {
+  id?: string;
   label: string;
-  type: "EARNING" | "DEDUCTION";
+  type: PayrollItemType;
   amount: number;
   description?: string;
+  payrollComponentMasterId?: string;
+  isActive?: boolean;
 }
 
-// Payroll Record
-export interface PayrollRecord {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  employeeEmail: string;
-  department: string;
-  designation?: string;
+// =============================================
+// TYPES - DEDUCTION SETTINGS
+// =============================================
+
+export interface LeaveDeduction {
+  enabled: boolean;
+  manualLeaveCount?: number;
+  manualAmountDeducted?: number;
+}
+
+export interface AttendanceDeduction {
+  enabled: boolean;
+  manualAbsentCount?: number;
+  manualAmountDeducted?: number;
+}
+
+// =============================================
+// TYPES - PAYROLL GENERATION
+// =============================================
+
+export interface GeneratePayrollPayload {
   month: number;
   year: number;
-  basicSalary: number;
-  grossSalary: number;
-  netSalary: number;
-  totalEarnings: number;
-  totalDeductions: number;
+  leaveDeduction?: LeaveDeduction;
+  attendanceDeduction?: AttendanceDeduction;
+}
+
+export interface GenerateSingleUserPayload {
+  userId: string;
+  month: number;
+  year: number;
+  leaveDeduction?: LeaveDeduction;
+  attendanceDeduction?: AttendanceDeduction;
+}
+
+// =============================================
+// TYPES - PAYROLL RECORD
+// =============================================
+
+export interface PayrollUserInfo {
+  id: string;
+  name?: string;
+  email?: string;
+  employeeCode?: string;
+  phone?: string;
+  department?: { id: string; name: string };
+  designation?: { id: string; name: string };
+  manager?: { id: string; name: string };
+}
+
+export interface PayrollSummaryDays {
+  presentDays: number;
+  absentDays: number;
+  lateCount: number;
+  halfDays: number;
+  payableDays: number;
+  paidLeaves: number;
+  unpaidLeaves: number;
+  totalDays?: number;
+}
+
+export interface PayrollRecord {
+  id: string;
+  userId: string;
+  month: number;
+  year: number;
+  status: PayrollStatus;
+  baseSalary?: number;
+  basicSalary?: number;
+  grossSalary?: number;
+  netSalary?: number;
+  totalEarnings?: number;
   totalAllowances?: number;
+  totalDeductions?: number;
   totalBonus?: number;
   totalTax?: number;
-  presentDays?: number;
-  absentDays?: number;
-  status: "DRAFT" | "PROCESSED" | "PAID" | "CANCELLED";
+  daysSummary?: PayrollSummaryDays;
+  items?: PayrollItem[];
+  payStructure?: {
+    id: string;
+    name: string;
+  };
   payDate?: string;
   processedAt?: string;
   paidAt?: string;
-  items?: PayrollItem[];
-  components?: any[];
   createdAt?: string;
   updatedAt?: string;
-  // Nested objects from API
-  user?: {
-    id: string;
-    name?: string;
-    email?: string;
-    employeeProfile?: {
-      employeeCode?: string;
-      salary?: number;
-    };
-    department?: {
-      name?: string;
-    };
-    designation?: {
-      name?: string;
-    };
-  };
-  payStructure?: {
-    id: string;
-    name?: string;
-    components?: any[];
-  };
-}
-
-// Transform API response to PayrollRecord
-const transformPayrollRecord = (record: any): PayrollRecord => {
-  return {
-    ...record,
-    employeeId: record.user?.id || record.userId,
-    employeeName: record.user?.name || record.user?.employeeProfile?.employeeCode || 'Unknown',
-    employeeEmail: record.user?.email || '',
-    department: record.user?.department?.name || record.department || 'N/A',
-    designation: record.user?.designation?.name || '',
-    basicSalary: record.baseSalary || record.basicSalary || 0,
-    items: record.items || [],
-  };
-};
-
-// My Payslip (simplified for employee's view)
-export interface Payslip {
-  id: string;
-  employeeId?: string;
+  // Nested from API
+  user?: PayrollUserInfo;
   employeeName?: string;
   employeeEmail?: string;
   department?: string;
-  month: number;
-  year: number;
-  monthName?: string;
-  payDate?: string;
-  basicSalary: number;
-  grossSalary?: number;
-  netSalary: number;
-  totalEarnings?: number;
-  totalDeductions?: number;
-  allowances?: number;
-  deductions?: number;
-  status: "DRAFT" | "PROCESSED" | "PAID";
-  items?: PayrollItem[];
-  components?: any[];
-  createdAt?: string;
+  designation?: string;
 }
 
-// Payroll Summary
-export interface PayrollSummary {
+// =============================================
+// TYPES - DASHBOARD KPIs
+// =============================================
+
+export interface PayrollDashboardKPIs {
   totalPayroll: number;
-  totalEmployees: number;
   processedCount: number;
   pendingCount: number;
+  failedCount: number;
   averageSalary: number;
+  totalEmployees: number;
+  month: number;
+  year: number;
+  statusBreakdown?: Record<PayrollStatus, number>;
 }
 
+// =============================================
+// TYPES - LISTING PARAMS
+// =============================================
+
+export interface PayrollListingParams {
+  month?: number;
+  year?: number;
+  userId?: string;
+  status?: PayrollStatus;
+}
+
+// =============================================
+// TYPES - PROCESS PAYLOAD
+// =============================================
+
+export interface ProcessPayrollPayload {
+  items?: PayrollItem[];
+}
+
+// =============================================
+// REDUX STATE
+// =============================================
+
 export interface PayrollState {
+  // Dashboard
+  dashboardKPIs: PayrollDashboardKPIs | null;
+  // Component Masters
+  componentMasters: PayrollComponentMaster[];
+  // Pay Structures
   payStructures: PayStructure[];
+  // Employee Overrides
+  employeeOverrides: Record<string, EmployeePayrollComponent[]>;
+  overrideEmployeeName: Record<string, string>;
+  // Payroll Records
   payrollRecords: PayrollRecord[];
-  myPayslips: Payslip[];
+  // Current Detail
   currentPayroll: PayrollRecord | null;
-  payrollSummary: PayrollSummary | null;
+  // My Payslips
+  myPayslips: PayrollRecord[];
+  myPayslipDetail: PayrollRecord | null;
+  // Employee payroll components (for employee self-service view)
+  employeePayrollComponents: EmployeePayrollComponentsDetail | null;
+  // UI State
   loading: boolean;
   processing: boolean;
   generating: boolean;
   error: string | null;
   successMessage: string | null;
+  // Listing filters
+  listingFilters: PayrollListingParams;
 }
 
 const initialState: PayrollState = {
+  dashboardKPIs: null,
+  componentMasters: [],
   payStructures: [],
+  employeeOverrides: {},
+  overrideEmployeeName: {},
   payrollRecords: [],
-  myPayslips: [],
   currentPayroll: null,
-  payrollSummary: null,
+  myPayslips: [],
+  myPayslipDetail: null,
+  employeePayrollComponents: null,
   loading: false,
   processing: false,
   generating: false,
   error: null,
   successMessage: null,
+  listingFilters: {},
 };
 
-// Helper to get token from localStorage
+// =============================================
+// HELPERS
+// =============================================
+
 const getToken = (): string | null => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("token");
-  }
+  if (typeof window !== 'undefined') return localStorage.getItem('token');
   return null;
 };
 
-const getAuthHeaders = () => {
-  const token = getToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
-};
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+});
 
-// Fetch Pay Structure
-export const fetchPayStructure = createAsyncThunk<PayStructure[]>(
-  "payroll/fetchStructure",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/pay-structure`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
+const BASE = `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll`;
 
-      const data = await response.json();
+// =============================================
+// THUNKS - DASHBOARD
+// =============================================
 
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to fetch pay structure");
-      }
-
-      const records = data.data || data || [];
-      return Array.isArray(records) ? records.map(transformPayStructure) : [];
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const fetchDashboardKPIs = createAsyncThunk<
+  PayrollDashboardKPIs,
+  { month: number; year: number },
+  { rejectValue: string }
+>('payroll/fetchDashboardKPIs', async ({ month, year }, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/dashboard-kpis?month=${month}&year=${year}`, {
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch dashboard KPIs');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error. Please try again.');
   }
-);
+});
 
-// Save Pay Structure
-export const savePayStructure = createAsyncThunk<PayStructure, PayStructure>(
-  "payroll/saveStructure",
-  async (structure, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/pay-structure`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify(structure),
-        }
-      );
+// =============================================
+// THUNKS - COMPONENT MASTERS
+// =============================================
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to save pay structure");
-      }
-
-      return data.data || data;
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const fetchComponentMasters = createAsyncThunk<
+  PayrollComponentMaster[],
+  void,
+  { rejectValue: string }
+>('payroll/fetchComponentMasters', async (_, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/component-master`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch component masters');
+    return data.data || data || [];
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
 
-// Fetch All Payroll Listings
-export const fetchAllPayrolls = createAsyncThunk<PayrollRecord[]>(
-  "payroll/fetchAll",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/all-listing`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to fetch payrolls");
-      }
-
-      const records = data.data || data || [];
-      return Array.isArray(records) ? records.map(transformPayrollRecord) : [];
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const createComponentMaster = createAsyncThunk<
+  PayrollComponentMaster,
+  CreateComponentMasterPayload,
+  { rejectValue: string }
+>('payroll/createComponentMaster', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/component-master`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to create component master');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
 
-// Generate Payroll
-export interface GeneratePayrollPayload {
-  month: number;
-  year: number;
-}
-
-export const generatePayroll = createAsyncThunk<PayrollRecord[], GeneratePayrollPayload>(
-  "payroll/generate",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/generate`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to generate payroll");
-      }
-
-      const records = data.data || data || [];
-      return Array.isArray(records) ? records.map(transformPayrollRecord) : [];
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const updateComponentMaster = createAsyncThunk<
+  PayrollComponentMaster,
+  { id: string; payload: CreateComponentMasterPayload },
+  { rejectValue: string }
+>('payroll/updateComponentMaster', async ({ id, payload }, { rejectWithValue }) => {
+  try {
+    // Backend uses POST for create/update — same endpoint
+    const res = await fetch(`${BASE}/component-master`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ ...payload, id }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to update component master');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
 
-// Process Payroll
-export interface ProcessPayrollPayload {
-  items: PayrollItem[];
-}
+// =============================================
+// THUNKS - PAY STRUCTURES
+// =============================================
 
-export const processPayroll = createAsyncThunk<PayrollRecord, { payrollId: string; items: PayrollItem[] }>(
-  "payroll/process",
-  async ({ payrollId, items }, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/process/${payrollId}`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ items }),
-        }
-      );
+export const fetchPayStructures = createAsyncThunk<
+  PayStructure[],
+  void,
+  { rejectValue: string }
+>('payroll/fetchPayStructures', async (_, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/pay-structure`, { headers: authHeaders() });
+    const json = await res.json();
+    if (!res.ok) return rejectWithValue(json.message || 'Failed to fetch pay structures');
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to process payroll");
-      }
-
-      return transformPayrollRecord(data.data || data);
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+    const list = json.data || json || [];
+    return list.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      departmentId: s.departmentId || s.department?.id,
+      departmentName: s.departmentName || s.department?.name,
+      designationId: s.designationId || s.designation?.id,
+      designationName: s.designationName || s.designation?.name,
+      isDefault: s.isDefault,
+      isActive: s.isActive,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      department: s.department,
+      designation: s.designation,
+      components: (s.components || []).map((c: any) => ({
+        id: c.id,
+        payrollMasterComponentId: c.payrollMasterComponentId,
+        payrollComponentMasterId: c.payrollMasterComponentId,
+        payrollMasterComponent: c.payrollMasterComponent,
+        componentMaster: c.payrollMasterComponent,
+        payStructureId: c.payStructureId,
+        valueType: c.valueType,
+        value: c.value,
+        isActive: c.isActive,
+        remarks: c.remarks,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
+    }));
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
 
-// Fetch My Payslips
-export const fetchMyPayslips = createAsyncThunk<Payslip[]>(
-  "payroll/fetchMyPayslips",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/my-payslips`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        return rejectWithValue(data.message || "Failed to fetch payslips");
-      }
-
-      // Transform records to Payslip format
-      const records = data.data || data || [];
-      if (!Array.isArray(records)) return [];
-      return records.map((record: any): Payslip => ({
-        id: record.id,
-        employeeId: record.user?.id || record.userId,
-        employeeName: record.user?.name || '',
-        employeeEmail: record.user?.email || '',
-        department: record.user?.department?.name || '',
-        month: record.month,
-        year: record.year,
-        basicSalary: record.baseSalary || record.basicSalary || 0,
-        grossSalary: record.grossSalary,
-        netSalary: record.netSalary || 0,
-        totalEarnings: record.totalEarnings,
-        totalDeductions: record.totalDeductions,
-        allowances: record.totalAllowances,
-        deductions: record.totalDeductions,
-        status: record.status,
-        payDate: record.paidAt || record.processedAt,
-        items: record.items || [],
-        createdAt: record.createdAt,
-      }));
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const createPayStructure = createAsyncThunk<
+  PayStructure,
+  CreatePayStructurePayload,
+  { rejectValue: string }
+>('payroll/createPayStructure', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/pay-structure`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to create pay structure');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
 
-// Download Payslip
-export const downloadPayslip = createAsyncThunk<string, string>(
-  "payroll/downloadPayslip",
-  async (payslipId, { rejectWithValue }) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/payroll/payslip/${payslipId}/download`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        }
-      );
-
-      if (!response.ok) {
-        return rejectWithValue("Failed to download payslip");
-      }
-
-      // Return download URL or blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      return url;
-    } catch (error) {
-      return rejectWithValue("Network error. Please try again.");
-    }
+export const updatePayStructure = createAsyncThunk<
+  PayStructure,
+  { id: string; payload: CreatePayStructurePayload },
+  { rejectValue: string }
+>('payroll/updatePayStructure', async ({ id, payload }, { rejectWithValue }) => {
+  try {
+    // Route: PUT /pay-structure/:id
+    const res = await fetch(`${BASE}/pay-structure/${id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to update pay structure');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
   }
-);
+});
+
+// GET /pay-structure/:id
+export const fetchPayStructureById = createAsyncThunk<
+  PayStructure,
+  string,
+  { rejectValue: string }
+>('payroll/fetchPayStructureById', async (id, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/pay-structure/${id}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch pay structure');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// DELETE /pay-structure/:id
+export const deletePayStructure = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string }
+>('payroll/deletePayStructure', async (id, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/pay-structure/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to delete pay structure');
+    return id;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// THUNKS - EMPLOYEE PAYROLL OVERRIDES
+// =============================================
+
+export const fetchEmployeeOverrides = createAsyncThunk<
+  { userId: string; components: EmployeePayrollComponent[]; employeeName?: string },
+  string,
+  { rejectValue: string }
+>('payroll/fetchEmployeeOverrides', async (userId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch employee overrides');
+    return { userId, components: data.data || data.components || [], employeeName: data.employeeName };
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const saveEmployeeOverrides = createAsyncThunk<
+  { userId: string; components: EmployeePayrollComponent[] },
+  { userId: string; components: EmployeePayrollComponent[] },
+  { rejectValue: string }
+>('payroll/saveEmployeeOverrides', async ({ userId, components }, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/employee-components/${userId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ components }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to save employee overrides');
+    return { userId, components: data.data || data.components || [] };
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// GET /employee-components/:userId — returns employee's full payroll structure + overrides
+export const fetchEmployeePayrollComponents = createAsyncThunk<
+  EmployeePayrollComponentsDetail,
+  string,
+  { rejectValue: string }
+>('payroll/fetchEmployeePayrollComponents', async (userId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
+    const json = await res.json();
+    if (!res.ok) return rejectWithValue(json.message || 'Failed to fetch employee payroll components');
+
+    const items = json.data || [];
+    // Normalize: API uses payrollMasterComponentId / payrollMasterComponent
+    const components: EmployeePayrollComponent[] = (Array.isArray(items) ? items : []).map((item: any) => ({
+      id: item.id,
+      payrollMasterComponentId: item.payrollMasterComponentId,
+      payrollMasterComponent: item.payrollMasterComponent,
+      payrollComponentMasterId: item.payrollMasterComponentId,
+      componentMaster: item.payrollMasterComponent,
+      payStructureId: item.payStructureId,
+      valueType: item.valueType,
+      value: item.value,
+      isActive: item.isActive,
+      remarks: item.remarks,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }));
+
+    return { userId, components };
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// THUNKS - PAYROLL GENERATION
+// =============================================
+
+export const generatePayroll = createAsyncThunk<
+  PayrollRecord[],
+  GeneratePayrollPayload,
+  { rejectValue: string }
+>('payroll/generate', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/generate`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to generate payroll');
+    return data.data || data || [];
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const generateSingleUserPayroll = createAsyncThunk<
+  PayrollRecord,
+  GenerateSingleUserPayload,
+  { rejectValue: string }
+>('payroll/generateSingleUser', async (payload, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/generate/user`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to regenerate payroll');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// THUNKS - PROCESS PAYROLL
+// =============================================
+
+export const processPayroll = createAsyncThunk<
+  PayrollRecord,
+  { payrollId: string; items?: PayrollItem[] },
+  { rejectValue: string }
+>('payroll/process', async ({ payrollId, items }, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/process/${payrollId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ items: items || [] }),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to process payroll');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const markPayrollDisbursing = createAsyncThunk<
+  PayrollRecord,
+  string,
+  { rejectValue: string }
+>('payroll/markDisbursing', async (payrollId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/mark-disbursing/${payrollId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to mark as disbursing');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const markPayrollPaid = createAsyncThunk<
+  PayrollRecord,
+  string,
+  { rejectValue: string }
+>('payroll/markPaid', async (payrollId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/mark-paid/${payrollId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to mark as paid');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const markPayrollFailed = createAsyncThunk<
+  PayrollRecord,
+  string,
+  { rejectValue: string }
+>('payroll/markFailed', async (payrollId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/mark-failed/${payrollId}`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to mark as failed');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// THUNKS - LISTING
+// =============================================
+
+export const fetchAllPayrolls = createAsyncThunk<
+  PayrollRecord[],
+  PayrollListingParams | void,
+  { rejectValue: string }
+>('payroll/fetchAll', async (filters, { rejectWithValue }) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters?.month) params.append('month', String(filters.month));
+    if (filters?.year) params.append('year', String(filters.year));
+    if (filters?.userId) params.append('userId', filters.userId);
+    if (filters?.status) params.append('status', filters.status);
+    const query = params.toString();
+    const res = await fetch(`${BASE}/all-listing${query ? `?${query}` : ''}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch payrolls');
+    return data.data || data || [];
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+export const fetchPayrollDetail = createAsyncThunk<
+  PayrollRecord,
+  { payrollId: string; userId?: string },
+  { rejectValue: string }
+>('payroll/fetchDetail', async ({ payrollId, userId }, { rejectWithValue }) => {
+  try {
+    // Route: /payroll/:payrollId/:userId
+    const url = userId ? `${BASE}/${payrollId}/${userId}` : `${BASE}/${payrollId}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch payroll detail');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// THUNKS - EMPLOYEE SELF-SERVICE
+// =============================================
+
+// GET /employee-components/:userId — Get my payroll lists (uses userId from localStorage)
+export const fetchMyPayrolls = createAsyncThunk<
+  PayrollRecord[],
+  void,
+  { rejectValue: string }
+>('payroll/fetchMyPayrolls', async (_, { rejectWithValue }) => {
+  try {
+    const userRaw = localStorage.getItem('user');
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    const userId = user?.id || user?.userId;
+    if (!userId) return rejectWithValue('User ID not found');
+
+    const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch my payrolls');
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// GET /payroll/:payrollId — Fetch my payroll detail (reuses fetchPayrollDetail with current userId)
+export const fetchMyPayrollDetail = createAsyncThunk<
+  PayrollRecord,
+  string,
+  { rejectValue: string }
+>('payroll/fetchMyPayrollDetail', async (payrollId, { rejectWithValue }) => {
+  try {
+    const userRaw = localStorage.getItem('user');
+    const user = userRaw ? JSON.parse(userRaw) : null;
+    const userId = user?.id || user?.userId;
+    const url = userId ? `${BASE}/${payrollId}/${userId}` : `${BASE}/${payrollId}`;
+    const res = await fetch(url, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch payroll detail');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
+// SLICE
+// =============================================
 
 const payrollSlice = createSlice({
-  name: "payroll",
+  name: 'payroll',
   initialState,
   reducers: {
-    clearPayrollError: (state) => {
-      state.error = null;
+    clearPayrollError: (state) => { state.error = null; },
+    clearPayrollSuccess: (state) => { state.successMessage = null; },
+    setListingFilters: (state, action: PayloadAction<PayrollListingParams>) => {
+      state.listingFilters = action.payload;
     },
-    clearPayrollSuccess: (state) => {
-      state.successMessage = null;
-    },
+    clearListingFilters: (state) => { state.listingFilters = {}; },
     setCurrentPayroll: (state, action: PayloadAction<PayrollRecord | null>) => {
       state.currentPayroll = action.payload;
     },
-    updatePayrollItem: (state, action: PayloadAction<{ index: number; item: PayrollItem }>) => {
-      if (state.currentPayroll && state.currentPayroll.items) {
-        state.currentPayroll.items[action.payload.index] = action.payload.item;
-      }
-    },
-    addPayrollItem: (state, action: PayloadAction<PayrollItem>) => {
-      if (state.currentPayroll) {
-        if (!state.currentPayroll.items) {
-          state.currentPayroll.items = [];
-        }
-        state.currentPayroll.items.push(action.payload);
-      }
-    },
-    removePayrollItem: (state, action: PayloadAction<number>) => {
-      if (state.currentPayroll && state.currentPayroll.items) {
-        state.currentPayroll.items.splice(action.payload, 1);
-      }
-    },
+    clearMyPayslipDetail: (state) => { state.myPayslipDetail = null; },
   },
   extraReducers: (builder) => {
-    // Fetch Pay Structure
-    builder.addCase(fetchPayStructure.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(fetchPayStructure.fulfilled, (state, action: PayloadAction<PayStructure[]>) => {
-      state.loading = false;
-      state.payStructures = action.payload;
-    });
-    builder.addCase(fetchPayStructure.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
+    // ── Dashboard KPIs ──────────────────────────────────────────
+    builder.addCase(fetchDashboardKPIs.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchDashboardKPIs.fulfilled, (s, a) => { s.loading = false; s.dashboardKPIs = a.payload; });
+    builder.addCase(fetchDashboardKPIs.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
-    // Save Pay Structure
-    builder.addCase(savePayStructure.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    });
-    builder.addCase(savePayStructure.fulfilled, (state, action: PayloadAction<PayStructure>) => {
-      state.loading = false;
-      const index = state.payStructures.findIndex((s) => s.id === action.payload.id);
-      if (index !== -1) {
-        state.payStructures[index] = action.payload;
-      } else {
-        state.payStructures.push(action.payload);
-      }
-      state.successMessage = "Pay structure saved successfully";
-    });
-    builder.addCase(savePayStructure.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
+    // ── Component Masters ───────────────────────────────────────
+    builder.addCase(fetchComponentMasters.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchComponentMasters.fulfilled, (s, a) => { s.loading = false; s.componentMasters = a.payload; });
+    builder.addCase(fetchComponentMasters.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
-    // Fetch All Payrolls
-    builder.addCase(fetchAllPayrolls.pending, (state) => {
-      state.loading = true;
-      state.error = null;
+    builder.addCase(createComponentMaster.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(createComponentMaster.fulfilled, (s, a) => {
+      s.loading = false;
+      const idx = s.componentMasters.findIndex((c) => c.id === a.payload.id);
+      if (idx !== -1) s.componentMasters[idx] = a.payload;
+      else s.componentMasters.push(a.payload);
+      s.successMessage = 'Component master saved successfully';
     });
-    builder.addCase(fetchAllPayrolls.fulfilled, (state, action: PayloadAction<PayrollRecord[]>) => {
-      state.loading = false;
-      state.payrollRecords = action.payload;
-    });
-    builder.addCase(fetchAllPayrolls.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    });
+    builder.addCase(createComponentMaster.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
-    // Generate Payroll
-    builder.addCase(generatePayroll.pending, (state) => {
-      state.generating = true;
-      state.error = null;
+    builder.addCase(updateComponentMaster.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(updateComponentMaster.fulfilled, (s, a) => {
+      s.loading = false;
+      const idx = s.componentMasters.findIndex((c) => c.id === a.payload.id);
+      if (idx !== -1) s.componentMasters[idx] = a.payload;
+      s.successMessage = 'Component master updated successfully';
     });
-    builder.addCase(generatePayroll.fulfilled, (state, action: PayloadAction<PayrollRecord[]>) => {
-      state.generating = false;
-      // Add generated payrolls to records
-      action.payload.forEach((payroll) => {
-        const existingIndex = state.payrollRecords.findIndex((p) => p.id === payroll.id);
-        if (existingIndex !== -1) {
-          state.payrollRecords[existingIndex] = payroll;
-        } else {
-          state.payrollRecords.push(payroll);
-        }
+    builder.addCase(updateComponentMaster.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // ── Pay Structures ───────────────────────────────────────────
+    builder.addCase(fetchPayStructures.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchPayStructures.fulfilled, (s, a) => { s.loading = false; s.payStructures = a.payload; });
+    builder.addCase(fetchPayStructures.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(createPayStructure.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(createPayStructure.fulfilled, (s, a) => {
+      s.loading = false;
+      const idx = s.payStructures.findIndex((p) => p.id === a.payload.id);
+      if (idx !== -1) s.payStructures[idx] = a.payload;
+      else s.payStructures.push(a.payload);
+      s.successMessage = 'Pay structure saved successfully';
+    });
+    builder.addCase(createPayStructure.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(updatePayStructure.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(updatePayStructure.fulfilled, (s, a) => {
+      s.loading = false;
+      const idx = s.payStructures.findIndex((p) => p.id === a.payload.id);
+      if (idx !== -1) s.payStructures[idx] = a.payload;
+      s.successMessage = 'Pay structure updated successfully';
+    });
+    builder.addCase(updatePayStructure.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // ── Employee Overrides ───────────────────────────────────────
+    builder.addCase(fetchEmployeeOverrides.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchEmployeeOverrides.fulfilled, (s, a) => {
+      s.loading = false;
+      s.employeeOverrides[a.payload.userId] = a.payload.components;
+      if (a.payload.employeeName) s.overrideEmployeeName[a.payload.userId] = a.payload.employeeName;
+    });
+    builder.addCase(fetchEmployeeOverrides.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(saveEmployeeOverrides.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(saveEmployeeOverrides.fulfilled, (s, a) => {
+      s.loading = false;
+      s.employeeOverrides[a.payload.userId] = a.payload.components;
+      s.successMessage = 'Employee overrides saved successfully';
+    });
+    builder.addCase(saveEmployeeOverrides.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // fetchPayStructureById
+    builder.addCase(fetchPayStructureById.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchPayStructureById.fulfilled, (s) => { s.loading = false; });
+    builder.addCase(fetchPayStructureById.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // deletePayStructure
+    builder.addCase(deletePayStructure.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(deletePayStructure.fulfilled, (s, a) => {
+      s.loading = false;
+      s.payStructures = s.payStructures.filter((p) => p.id !== a.payload);
+      s.successMessage = 'Pay structure deleted successfully';
+    });
+    builder.addCase(deletePayStructure.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // ── Employee Payroll Components (self-service) ─────────────────
+    builder.addCase(fetchEmployeePayrollComponents.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchEmployeePayrollComponents.fulfilled, (s, a) => { s.loading = false; s.employeePayrollComponents = a.payload; });
+    builder.addCase(fetchEmployeePayrollComponents.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // ── Generate Payroll ─────────────────────────────────────────
+    builder.addCase(generatePayroll.pending, (s) => { s.generating = true; s.error = null; });
+    builder.addCase(generatePayroll.fulfilled, (s, a) => {
+      s.generating = false;
+      a.payload.forEach((p) => {
+        const idx = s.payrollRecords.findIndex((r) => r.id === p.id);
+        if (idx !== -1) s.payrollRecords[idx] = p;
+        else s.payrollRecords.unshift(p);
       });
-      state.successMessage = "Payroll generated successfully";
+      s.successMessage = `Payroll generated for ${a.payload.length} employee(s)`;
     });
-    builder.addCase(generatePayroll.rejected, (state, action) => {
-      state.generating = false;
-      state.error = action.payload as string;
-    });
+    builder.addCase(generatePayroll.rejected, (s, a) => { s.generating = false; s.error = a.payload as string; });
 
-    // Process Payroll
-    builder.addCase(processPayroll.pending, (state) => {
-      state.processing = true;
-      state.error = null;
+    builder.addCase(generateSingleUserPayroll.pending, (s) => { s.processing = true; s.error = null; });
+    builder.addCase(generateSingleUserPayroll.fulfilled, (s, a) => {
+      s.processing = false;
+      const idx = s.payrollRecords.findIndex((r) => r.id === a.payload.id);
+      if (idx !== -1) s.payrollRecords[idx] = a.payload;
+      if (s.currentPayroll?.id === a.payload.id) s.currentPayroll = a.payload;
+      s.successMessage = 'Employee payroll updated successfully';
     });
-    builder.addCase(processPayroll.fulfilled, (state, action: PayloadAction<PayrollRecord>) => {
-      state.processing = false;
-      const index = state.payrollRecords.findIndex((p) => p.id === action.payload.id);
-      if (index !== -1) {
-        state.payrollRecords[index] = action.payload;
-      }
-      state.currentPayroll = null;
-      state.successMessage = "Payroll processed successfully";
-    });
-    builder.addCase(processPayroll.rejected, (state, action) => {
-      state.processing = false;
-      state.error = action.payload as string;
-    });
+    builder.addCase(generateSingleUserPayroll.rejected, (s, a) => { s.processing = false; s.error = a.payload as string; });
 
-    // Fetch My Payslips
-    builder.addCase(fetchMyPayslips.pending, (state) => {
-      state.loading = true;
-      state.error = null;
+    // ── Process / Status Updates ──────────────────────────────────
+    builder.addCase(processPayroll.pending, (s) => { s.processing = true; s.error = null; });
+    builder.addCase(processPayroll.fulfilled, (s, a) => {
+      s.processing = false;
+      const idx = s.payrollRecords.findIndex((r) => r.id === a.payload.id);
+      if (idx !== -1) s.payrollRecords[idx] = a.payload;
+      if (s.currentPayroll?.id === a.payload.id) s.currentPayroll = a.payload;
+      s.successMessage = 'Payroll processed successfully';
     });
-    builder.addCase(fetchMyPayslips.fulfilled, (state, action: PayloadAction<Payslip[]>) => {
-      state.loading = false;
-      state.myPayslips = action.payload;
+    builder.addCase(processPayroll.rejected, (s, a) => { s.processing = false; s.error = a.payload as string; });
+
+    builder.addCase(markPayrollDisbursing.pending, (s) => { s.processing = true; s.error = null; });
+    builder.addCase(markPayrollDisbursing.fulfilled, (s, a) => {
+      s.processing = false;
+      const idx = s.payrollRecords.findIndex((r) => r.id === a.payload.id);
+      if (idx !== -1) s.payrollRecords[idx] = a.payload;
+      if (s.currentPayroll?.id === a.payload.id) s.currentPayroll = a.payload;
+      s.successMessage = 'Payroll marked as disbursing';
     });
-    builder.addCase(fetchMyPayslips.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
+    builder.addCase(markPayrollDisbursing.rejected, (s, a) => { s.processing = false; s.error = a.payload as string; });
+
+    builder.addCase(markPayrollPaid.pending, (s) => { s.processing = true; s.error = null; });
+    builder.addCase(markPayrollPaid.fulfilled, (s, a) => {
+      s.processing = false;
+      const idx = s.payrollRecords.findIndex((r) => r.id === a.payload.id);
+      if (idx !== -1) s.payrollRecords[idx] = a.payload;
+      if (s.currentPayroll?.id === a.payload.id) s.currentPayroll = a.payload;
+      s.successMessage = 'Payroll marked as paid';
     });
+    builder.addCase(markPayrollPaid.rejected, (s, a) => { s.processing = false; s.error = a.payload as string; });
+
+    builder.addCase(markPayrollFailed.pending, (s) => { s.processing = true; s.error = null; });
+    builder.addCase(markPayrollFailed.fulfilled, (s, a) => {
+      s.processing = false;
+      const idx = s.payrollRecords.findIndex((r) => r.id === a.payload.id);
+      if (idx !== -1) s.payrollRecords[idx] = a.payload;
+      if (s.currentPayroll?.id === a.payload.id) s.currentPayroll = a.payload;
+      s.successMessage = 'Payroll marked as failed';
+    });
+    builder.addCase(markPayrollFailed.rejected, (s, a) => { s.processing = false; s.error = a.payload as string; });
+
+    // ── Fetch All / Detail ───────────────────────────────────────
+    builder.addCase(fetchAllPayrolls.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchAllPayrolls.fulfilled, (s, a) => { s.loading = false; s.payrollRecords = a.payload; });
+    builder.addCase(fetchAllPayrolls.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(fetchPayrollDetail.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchPayrollDetail.fulfilled, (s, a) => { s.loading = false; s.currentPayroll = a.payload; });
+    builder.addCase(fetchPayrollDetail.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    // ── Employee Self-Service ────────────────────────────────────
+    builder.addCase(fetchMyPayrolls.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchMyPayrolls.fulfilled, (s, a) => { s.loading = false; s.myPayslips = a.payload; });
+    builder.addCase(fetchMyPayrolls.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(fetchMyPayrollDetail.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchMyPayrollDetail.fulfilled, (s, a) => { s.loading = false; s.myPayslipDetail = a.payload; });
+    builder.addCase(fetchMyPayrollDetail.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
   },
 });
 
 export const {
   clearPayrollError,
   clearPayrollSuccess,
+  setListingFilters,
+  clearListingFilters,
   setCurrentPayroll,
-  updatePayrollItem,
-  addPayrollItem,
-  removePayrollItem,
+  clearMyPayslipDetail,
 } = payrollSlice.actions;
 
 export default payrollSlice.reducer;

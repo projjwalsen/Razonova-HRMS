@@ -1,1047 +1,1576 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DollarSign,
   Users,
   Clock,
-  BarChart3,
-  Download,
-  FileText,
-  Check,
-  X,
-  Calendar,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   Plus,
-  Eye,
+  X,
   Settings,
+  FileText,
+  RefreshCw,
+  Eye,
+  Search,
+  Check,
+  ArrowRight,
+  Trash2,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchPayStructure,
-  savePayStructure,
+  fetchDashboardKPIs,
+  fetchComponentMasters,
+  createComponentMaster,
+  fetchPayStructures,
+  createPayStructure,
+  updatePayStructure,
+  deletePayStructure,
+  fetchEmployeeOverrides,
+  saveEmployeeOverrides,
   fetchAllPayrolls,
   generatePayroll,
+  generateSingleUserPayroll,
   processPayroll,
-  fetchMyPayslips,
-  setCurrentPayroll,
-  updatePayrollItem,
-  addPayrollItem,
-  removePayrollItem,
+  markPayrollDisbursing,
+  markPayrollPaid,
+  markPayrollFailed,
   clearPayrollError,
   clearPayrollSuccess,
+  PayrollComponentMaster,
+  CreateComponentMasterPayload,
   PayStructure,
+  CreatePayStructurePayload,
+  EmployeePayrollComponent,
   PayrollRecord,
   PayrollItem,
+  PayrollStatus,
+  PayrollItemType,
+  PayStructureValueType,
+  PayrollComponentType,
+  GeneratePayrollPayload,
 } from '@/store/actions/payrollActions';
 import { fetchDepartments } from '@/store/actions/departmentActions';
 import { fetchDesignations } from '@/store/actions/designationActions';
+import { fetchUserSelectOptions, UserSelectOption } from '@/store/actions/leaveActions';
 
-export default function PayrollPage() {
-  const dispatch = useAppDispatch();
-  const {
-    payStructures,
-    payrollRecords,
-    myPayslips,
-    currentPayroll,
-    loading,
-    processing,
-    generating,
-    error,
-    successMessage,
-  } = useAppSelector((state) => state.payroll);
-  const { departments } = useAppSelector((state) => state.departments);
-  const { designations } = useAppSelector((state) => state.designations);
+type AdminTab = 'dashboard' | 'components' | 'structures' | 'overrides' | 'generate' | 'listing';
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'payslips' | 'generate' | 'structure'>('overview');
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [showStructureModal, setShowStructureModal] = useState(false);
-  const [showProcessModal, setShowProcessModal] = useState(false);
-  const [showPayslipModal, setShowPayslipModal] = useState(false);
-  const [selectedPayslip, setSelectedPayslip] = useState<any>(null);
-  const [editingStructure, setEditingStructure] = useState<PayStructure | null>(null);
-  const [newItem, setNewItem] = useState<PayrollItem>({
-    label: '',
-    type: 'EARNING',
-    amount: 0,
-    description: '',
-  });
-  const contentRef = useRef<HTMLDivElement>(null);
+const MONTHS = [
+  { value: 1, label: 'January' }, { value: 2, label: 'February' },
+  { value: 3, label: 'March' }, { value: 4, label: 'April' },
+  { value: 5, label: 'May' }, { value: 6, label: 'June' },
+  { value: 7, label: 'July' }, { value: 8, label: 'August' },
+  { value: 9, label: 'September' }, { value: 10, label: 'October' },
+  { value: 11, label: 'November' }, { value: 12, label: 'December' },
+];
 
-  // Structure form state
-  const [structureForm, setStructureForm] = useState<PayStructure>({
-    name: '',
-    departmentId: '',
-    designationId: '',
-    isDefault: false,
-    components: [],
-  });
+const STATUS_COLORS: Record<PayrollStatus, string> = {
+  DRAFT: 'bg-blue-100 text-blue-700',
+  PROCESSED: 'bg-green-100 text-green-700',
+  DISBURSING: 'bg-yellow-100 text-yellow-700',
+  PAID: 'bg-emerald-100 text-emerald-700',
+  FAILED: 'bg-red-100 text-red-700',
+  CANCELLED: 'bg-gray-100 text-gray-500',
+};
 
-  // Fetch data on mount
-  useEffect(() => {
-    dispatch(fetchPayStructure());
-    dispatch(fetchAllPayrolls());
-    dispatch(fetchMyPayslips());
-    dispatch(fetchDepartments());
-    dispatch(fetchDesignations());
-  }, [dispatch]);
+const STATUS_ICON: Record<PayrollStatus, React.ReactNode> = {
+  DRAFT: <Clock className="w-3.5 h-3.5" />,
+  PROCESSED: <CheckCircle className="w-3.5 h-3.5" />,
+  DISBURSING: <Clock className="w-3.5 h-3.5" />,
+  PAID: <Check className="w-3.5 h-3.5" />,
+  FAILED: <XCircle className="w-3.5 h-3.5" />,
+  CANCELLED: <XCircle className="w-3.5 h-3.5" />,
+};
 
-  // Fetch departments and designations when structure modal opens
-  useEffect(() => {
-    if (showStructureModal) {
-      dispatch(fetchDepartments());
-      dispatch(fetchDesignations());
-    }
-  }, [showStructureModal, dispatch]);
+const ITEM_TYPE_COLORS: Record<PayrollItemType, string> = {
+  EARNING: 'bg-green-50 text-green-700',
+  ALLOWANCE: 'bg-blue-50 text-blue-700',
+  DEDUCTION: 'bg-red-50 text-red-700',
+  TAX: 'bg-orange-50 text-orange-700',
+  BONUS: 'bg-purple-50 text-purple-700',
+};
 
-  // Clear messages after 3 seconds
-  useEffect(() => {
-    if (successMessage || error) {
-      const timer = setTimeout(() => {
-        dispatch(clearPayrollError());
-        dispatch(clearPayrollSuccess());
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage, error, dispatch]);
+const formatMonth = (m: number, y: number) =>
+  new Date(y, m - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  useEffect(() => {
-    const items = contentRef.current?.querySelectorAll('.payroll-item');
-    items?.forEach((item, index) => {
-      (item as HTMLElement).style.animation = `fadeInSmooth 0.5s ease-out ${index * 0.1}s forwards`;
-      (item as HTMLElement).style.opacity = '0';
-    });
-  }, [activeTab]);
+const fmt = (n: number | undefined | null) =>
+  n?.toLocaleString('en-IN') ?? '0';
 
-  const handleGeneratePayroll = async () => {
-    const [year, month] = selectedMonth.split('-').map(Number);
-    const result = await dispatch(generatePayroll({ month, year }));
-    if (generatePayroll.fulfilled.match(result)) {
-      dispatch(fetchAllPayrolls());
-    }
-  };
+// ─────────────────────────────────────────────
+// Reusable: Status Badge
+// ─────────────────────────────────────────────
+const StatusBadge = ({ status }: { status: PayrollStatus }) => (
+  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[status]}`}>
+    {STATUS_ICON[status]}
+    {status}
+  </span>
+);
 
-  const handleProcessPayroll = async () => {
-    if (!currentPayroll?.components || currentPayroll.components.length === 0) {
-      alert('Please add at least one item before processing');
-      return;
-    }
-    const result = await dispatch(
-      processPayroll({
-        payrollId: currentPayroll.id,
-        items: currentPayroll.components,
-      })
-    );
-    if (processPayroll.fulfilled.match(result)) {
-      setShowProcessModal(false);
-      dispatch(fetchAllPayrolls());
-      dispatch(fetchMyPayslips());
-    }
-  };
-
-  const handleOpenProcessModal = (payroll: PayrollRecord) => {
-    dispatch(setCurrentPayroll(payroll));
-    setShowProcessModal(true);
-  };
-
-  const handleAddItem = () => {
-    if (!newItem.label || newItem.amount <= 0) {
-      alert('Please enter label and amount');
-      return;
-    }
-    if (currentPayroll) {
-      dispatch(addPayrollItem(newItem));
-    }
-    setNewItem({ label: '', type: 'EARNING', amount: 0, description: '' });
-  };
-
-  const handleRemoveItem = (index: number) => {
-    dispatch(removePayrollItem(index));
-  };
-
-  const handleDownloadPayslip = (payslip: any) => {
-    setSelectedPayslip(payslip);
-    setShowPayslipModal(true);
-  };
-
-  const handleSaveStructure = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await dispatch(savePayStructure(structureForm));
-    setShowStructureModal(false);
-    setEditingStructure(null);
-    setStructureForm({
-      name: '',
-      departmentId: '',
-      designationId: '',
-      isDefault: false,
-      components: [],
-    });
-    dispatch(fetchPayStructure());
-  };
-
-  const handleEditStructure = (structure: PayStructure) => {
-    setEditingStructure(structure);
-    setStructureForm(structure);
-    setShowStructureModal(true);
-  };
-
-  const handleAddNewStructure = () => {
-    setEditingStructure(null);
-    setStructureForm({
-      name: '',
-      departmentId: '',
-      designationId: '',
-      isDefault: false,
-      components: [],
-    });
-    setShowStructureModal(true);
-  };
-
-  const handleAddStructureComponent = () => {
-    setStructureForm({
-      ...structureForm,
-      components: [
-        ...structureForm.components,
-        {
-          label: '',
-          componentType: 'BASIC',
-          valueType: 'PERCENTAGE',
-          value: 0,
-          isTaxable: false,
-          attachmentRequired: false,
-        },
-      ],
-    });
-  };
-
-  const handleRemoveStructureComponent = (index: number) => {
-    setStructureForm({
-      ...structureForm,
-      components: structureForm.components.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleUpdateStructureComponent = (index: number, field: string, value: any) => {
-    const updated = [...structureForm.components];
-    updated[index] = { ...updated[index], [field]: value };
-    setStructureForm({ ...structureForm, components: updated });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'PAID':
-      case 'PROCESSED':
-        return 'bg-green-100 text-green-700';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-700';
-      case 'DRAFT':
-        return 'bg-blue-100 text-blue-700';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const formatStatus = (status: string) => {
-    if (!status) return '';
-    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-  };
-
-  const formatDate = (date: string) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const formatMonth = (month: number, year: number) => {
-    const date = new Date(year, month - 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  };
-
-  const getMonthName = (month: number) => {
-    const date = new Date(2026, month - 1);
-    return date.toLocaleDateString('en-US', { month: 'short' });
-  };
-
-  // Calculate summary
-  const totalPayroll = payrollRecords.reduce((sum, p) => sum + (p.netSalary || 0), 0);
-  const processedCount = payrollRecords.filter((p) => p.status === 'PROCESSED' || p.status === 'PAID').length;
-  const pendingCount = payrollRecords.filter((p) => p.status === 'DRAFT').length;
-
+// ─────────────────────────────────────────────
+// Reusable: Confirmation Modal
+// ─────────────────────────────────────────────
+const ConfirmModal = ({
+  open,
+  title,
+  message,
+  confirmLabel,
+  confirmVariant,
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean; title: string; message: string; confirmLabel: string;
+  confirmVariant?: 'danger' | 'primary';
+  loading: boolean; onConfirm: () => void; onCancel: () => void;
+}) => {
+  if (!open) return null;
   return (
-    <div className="p-8">
-      <div ref={contentRef}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 payroll-item">
-          <div>
-            <h1 className="text-3xl font-bold font-['Montserrat']">Payroll Management</h1>
-            <p className="text-gray-600 mt-1">Manage salaries, payslips, and compensation</p>
-          </div>
-          <button
-            onClick={() => setActiveTab('structure')}
-            className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all duration-300 flex items-center gap-2"
-          >
-            <Settings className="w-5 h-5" />
-            Structure
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4">
+        <div className="p-6">
+          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <p className="text-sm text-gray-500 mt-2">{message}</p>
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onCancel} disabled={loading}
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={loading}
+            className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 flex items-center justify-center gap-2 ${
+              confirmVariant === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0445AD] hover:bg-[#033080]'
+            }`}>
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {confirmLabel}
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center justify-between">
-            <span>{successMessage}</span>
-          </div>
-        )}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => dispatch(clearPayrollError())} className="text-red-500 hover:text-red-700">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+// ─────────────────────────────────────────────
+// Reusable: Empty State
+// ─────────────────────────────────────────────
+const EmptyState = ({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) => (
+  <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+    <Icon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+    <p className="text-gray-500 font-medium">{title}</p>
+    {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+  </div>
+);
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 payroll-item">
-          <div className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-sm font-semibold text-gray-600">{payrollRecords.length} employees</span>
-            </div>
-            <div className="text-3xl font-bold mb-1 font-['Montserrat']">
-              ₹{totalPayroll.toLocaleString()}
-            </div>
-            <div className="text-sm text-gray-600">Total Payroll</div>
-          </div>
+// ─────────────────────────────────────────────
+// Reusable: Section Header
+// ─────────────────────────────────────────────
+const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) => (
+  <div className="flex items-center justify-between mb-4">
+    <div>
+      <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+      {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+    </div>
+    {action}
+  </div>
+);
 
-          <div className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <Check className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold mb-1 font-['Montserrat'] text-green-600">{processedCount}</div>
-            <div className="text-sm text-gray-600">Processed</div>
+// ─────────────────────────────────────────────
+// COMPONENT MASTER MODAL
+// ─────────────────────────────────────────────
+const ComponentMasterModal = ({
+  open,
+  editing,
+  onClose,
+  onSave,
+  loading,
+}: {
+  open: boolean; editing: PayrollComponentMaster | null;
+  onClose: () => void; onSave: (p: CreateComponentMasterPayload) => void; loading: boolean;
+}) => {
+  const [form, setForm] = useState<CreateComponentMasterPayload>({
+    name: '', type: 'EARNING', valueType: 'FLAT', isTaxable: false, isOptional: false, isActive: true,
+  });
+  useEffect(() => { setForm(editing ? { name: editing.name, type: editing.type, valueType: editing.valueType, isTaxable: editing.isTaxable, isOptional: editing.isOptional, isActive: editing.isActive } : { name: '', type: 'EARNING', valueType: 'FLAT', isTaxable: false, isOptional: false, isActive: true }); }, [editing, open]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold">{editing ? 'Edit Component Master' : 'Add Component Master'}</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Component Name *</label>
+            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., House Rent Allowance"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" required />
           </div>
-
-          <div className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-white" />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type *</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as PayrollComponentType })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                {(['EARNING', 'ALLOWANCE', 'DEDUCTION', 'TAX', 'BONUS'] as PayrollComponentType[]).map(t => (
+                  <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
+                ))}
+              </select>
             </div>
-            <div className="text-3xl font-bold mb-1 font-['Montserrat'] text-yellow-600">{pendingCount}</div>
-            <div className="text-sm text-gray-600">Pending</div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Value Type *</label>
+              <select value={form.valueType} onChange={(e) => setForm({ ...form, valueType: e.target.value as PayStructureValueType })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                <option value="FLAT">Fixed Amount</option>
+                <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
+              </select>
+            </div>
           </div>
-
-          <div className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold mb-1 font-['Montserrat']">
-              ₹{payrollRecords.length > 0 ? Math.round(totalPayroll / payrollRecords.length).toLocaleString() : 0}
-            </div>
-            <div className="text-sm text-gray-600">Avg. Salary</div>
+          <div className="flex flex-wrap gap-6">
+            {(['isTaxable', 'isOptional', 'isActive'] as const).map((field) => (
+              <label key={field} className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form[field]} onChange={(e) => setForm({ ...form, [field]: e.target.checked })}
+                  className="w-4 h-4 text-[#0445AD] border-gray-300 rounded focus:ring-[#0445AD]" />
+                <span className="text-sm text-gray-600">{field === 'isTaxable' ? 'Taxable' : field === 'isOptional' ? 'Optional' : 'Active'}</span>
+              </label>
+            ))}
           </div>
         </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => onSave(form)} disabled={loading || !form.name.trim()}
+            className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {editing ? 'Update' : 'Create'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* Tabs */}
-        <div className="mb-6 payroll-item">
-          <div className="flex gap-4 border-b-2 border-gray-200">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-3 font-semibold transition-all duration-300 ${
-                activeTab === 'overview'
-                  ? 'text-[#0445AD] border-b-2 border-black'
-                  : 'text-gray-500 hover:text-[#0445AD]'
-              }`}
-            >
-              All Payrolls
-            </button>
-            <button
-              onClick={() => setActiveTab('payslips')}
-              className={`px-6 py-3 font-semibold transition-all duration-300 ${
-                activeTab === 'payslips'
-                  ? 'text-[#0445AD] border-b-2 border-black'
-                  : 'text-gray-500 hover:text-[#0445AD]'
-              }`}
-            >
-              My Payslips
-            </button>
-            <button
-              onClick={() => setActiveTab('generate')}
-              className={`px-6 py-3 font-semibold transition-all duration-300 ${
-                activeTab === 'generate'
-                  ? 'text-[#0445AD] border-b-2 border-black'
-                  : 'text-gray-500 hover:text-[#0445AD]'
-              }`}
-            >
-              Generate Payroll
-            </button>
-            <button
-              onClick={() => setActiveTab('structure')}
-              className={`px-6 py-3 font-semibold transition-all duration-300 ${
-                activeTab === 'structure'
-                  ? 'text-[#0445AD] border-b-2 border-black'
-                  : 'text-gray-500 hover:text-[#0445AD]'
-              }`}
-            >
-              Pay Structure
-            </button>
+// ─────────────────────────────────────────────
+// PAY STRUCTURE MODAL
+// ─────────────────────────────────────────────
+const PayStructureModal = ({
+  open, editing, departments, designations, components,
+  onClose, onSave, loading,
+}: {
+  open: boolean; editing: PayStructure | null; departments: any[]; designations: any[];
+  components: PayrollComponentMaster[]; onClose: () => void;
+  onSave: (p: CreatePayStructurePayload) => void; loading: boolean;
+}) => {
+  const [form, setForm] = useState<CreatePayStructurePayload>(() => {
+    if (editing) {
+      return {
+        name: editing.name,
+        departmentId: editing.departmentId,
+        designationId: editing.designationId,
+        isDefault: editing.isDefault,
+        isActive: editing.isActive,
+        components: editing.components.map(c => ({
+          payrollComponentMasterId: c.payrollComponentMasterId || c.id || '',
+          valueType: c.valueType,
+          value: c.value,
+          isActive: c.isActive,
+          remarks: c.remarks,
+        })),
+      };
+    }
+    return { name: '', isDefault: false, isActive: true, components: [] };
+  });
+
+  // Re-sync form when editing structure changes (e.g., when modal reopens with new structure)
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        name: editing.name,
+        departmentId: editing.departmentId,
+        designationId: editing.designationId,
+        isDefault: editing.isDefault,
+        isActive: editing.isActive,
+        components: editing.components.map(c => ({
+          payrollComponentMasterId: c.payrollComponentMasterId || c.id || '',
+          valueType: c.valueType,
+          value: c.value,
+          isActive: c.isActive,
+          remarks: c.remarks,
+        })),
+      });
+    } else if (open) {
+      // Only reset when creating new (not when switching between edits)
+      setForm({ name: '', isDefault: false, isActive: true, components: [] });
+    }
+  }, [editing, open]);
+
+  const addComponent = () => {
+    if (components.length === 0) return;
+    setForm({ ...form, components: [...form.components, { payrollComponentMasterId: components[0].id!, valueType: 'FLAT', value: 0, isActive: true }] });
+  };
+
+  const removeComponent = (i: number) => setForm({ ...form, components: form.components.filter((_, idx) => idx !== i) });
+
+  const updateComponent = (i: number, field: string, value: any) => {
+    const updated = [...form.components];
+    updated[i] = { ...updated[i], [field]: value };
+    setForm({ ...form, components: updated });
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h2 className="text-lg font-bold">{editing ? 'Edit Pay Structure' : 'Add Pay Structure'}</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Structure Name *</label>
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g., Engineering Structure"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Department</label>
+              <select value={form.departmentId || ''} onChange={(e) => setForm({ ...form, departmentId: e.target.value || undefined })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                <option value="">All Departments</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Designation</label>
+              <select value={form.designationId || ''} onChange={(e) => setForm({ ...form, designationId: e.target.value || undefined })}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                <option value="">All Designations</option>
+                {designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-6 pt-6">
+              {(['isDefault', 'isActive'] as const).map(f => (
+                <label key={f} className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form[f]} onChange={(e) => setForm({ ...form, [f]: e.target.checked })}
+                    className="w-4 h-4 text-[#0445AD] border-gray-300 rounded focus:ring-[#0445AD]" />
+                  <span className="text-sm text-gray-600">{f === 'isDefault' ? 'Set as Default' : 'Active'}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold text-gray-700">Components</h4>
+              <button type="button" onClick={addComponent} disabled={components.length === 0}
+                className="px-3 py-1.5 bg-[#0445AD] text-white rounded-lg text-xs font-semibold hover:bg-[#033080] disabled:opacity-50 flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add
+              </button>
+            </div>
+            {form.components.length === 0 && (
+              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400">
+                No components added. Click "Add" to include salary components.
+              </div>
+            )}
+            {form.components.map((c, i) => (
+              <div key={i} className="grid grid-cols-12 gap-2 mb-2 p-3 bg-gray-50 rounded-xl">
+                <select value={c.payrollComponentMasterId} onChange={(e) => updateComponent(i, 'payrollComponentMasterId', e.target.value)}
+                  className="col-span-5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
+                  <option value="">Select component</option>
+                  {components.map(cm => <option key={cm.id} value={cm.id}>{cm.name} ({cm.type})</option>)}
+                </select>
+                <select value={c.valueType} onChange={(e) => updateComponent(i, 'valueType', e.target.value)}
+                  className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
+                  <option value="FLAT">Fixed</option>
+                  <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
+                </select>
+                <input type="number" value={c.value} onChange={(e) => updateComponent(i, 'value', parseFloat(e.target.value) || 0)}
+                  placeholder="Value"
+                  className="col-span-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
+                <label className="col-span-1 flex items-center justify-center cursor-pointer">
+                  <input type="checkbox" checked={c.isActive} onChange={(e) => updateComponent(i, 'isActive', e.target.checked)}
+                    className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+                </label>
+                <button type="button" onClick={() => removeComponent(i)} className="col-span-1 p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {form.components.length > 0 && (
+              <div className="mt-1 text-xs text-gray-400">
+                Order: component, value type, value, active toggle, remove
+              </div>
+            )}
           </div>
         </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => onSave(form)} disabled={loading || !form.name.trim()}
+            className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {editing ? 'Update Structure' : 'Create Structure'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* All Payrolls */}
-        {activeTab === 'overview' && (
-          <div className="payroll-item">
-            <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
-              {loading ? (
-                <div className="flex items-center justify-center h-48">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
-                </div>
-              ) : payrollRecords.length === 0 ? (
-                <div className="text-center py-12">
-                  <DollarSign className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500">No payroll records found</p>
-                  <button
-                    onClick={() => setActiveTab('generate')}
-                    className="mt-4 px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
-                  >
-                    Generate Payroll
-                  </button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-100">
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Employee</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Month</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Basic</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Gross</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Deductions</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Net Salary</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payrollRecords.map((record) => (
-                        <tr key={record.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold">{record.employeeName}</div>
-                            <div className="text-xs text-gray-500">{record.employeeEmail}</div>
-                          </td>
-                          <td className="py-3 px-4">{formatMonth(record.month, record.year)}</td>
-                          <td className="py-3 px-4">₹{record.basicSalary?.toLocaleString() || 0}</td>
-                          <td className="py-3 px-4">₹{record.grossSalary?.toLocaleString() || 0}</td>
-                          <td className="py-3 px-4 text-red-600">
-                            ₹{(record.totalDeductions || 0).toLocaleString()}
-                          </td>
-                          <td className="py-3 px-4 font-bold text-green-600">
-                            ₹{record.netSalary?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
-                              {formatStatus(record.status)}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            {record.status === 'DRAFT' && (
-                              <button
-                                onClick={() => handleOpenProcessModal(record)}
-                                className="px-3 py-1 bg-[#0445AD] text-white rounded text-xs font-semibold hover:bg-blue-700"
-                              >
-                                Process
-                              </button>
-                            )}
-                            {record.status !== 'DRAFT' && (
-                              <button
-                                onClick={() => handleDownloadPayslip(record)}
-                                className="px-3 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600"
-                              >
-                                View
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+// ─────────────────────────────────────────────
+// PROCESS PAYROLL MODAL
+// ─────────────────────────────────────────────
+const ProcessPayrollModal = ({
+  open, record, onClose, onProcess, loading,
+}: {
+  open: boolean; record: PayrollRecord | null; onClose: () => void;
+  onProcess: (id: string, items: PayrollItem[]) => void; loading: boolean;
+}) => {
+  const [items, setItems] = useState<PayrollItem[]>([]);
+  const [newItem, setNewItem] = useState<PayrollItem>({ label: '', type: 'BONUS', amount: 0, description: '' });
+  useEffect(() => { if (open) setItems(record?.items || []); }, [record, open]);
+
+  const addItem = () => {
+    if (!newItem.label || newItem.amount <= 0) return;
+    setItems([...items, { ...newItem }]);
+    setNewItem({ label: '', type: 'BONUS', amount: 0, description: '' });
+  };
+
+  const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
+
+  if (!open || !record) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+          <div>
+            <h2 className="text-lg font-bold">Process Payroll</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{record.user?.name || record.employeeName} · {formatMonth(record.month, record.year)}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl text-sm">
+            <div className="text-center"><p className="text-gray-400 text-xs">Base</p><p className="font-bold">₹{fmt(record.baseSalary || record.basicSalary)}</p></div>
+            <div className="text-center"><p className="text-gray-400 text-xs">Gross</p><p className="font-bold">₹{fmt(record.grossSalary)}</p></div>
+            <div className="text-center"><p className="text-gray-400 text-xs">Net</p><p className="font-bold text-green-600">₹{fmt(record.netSalary)}</p></div>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Add Extra Items</h4>
+            <div className="grid grid-cols-12 gap-2 mb-2">
+              <input value={newItem.label} onChange={(e) => setNewItem({ ...newItem, label: e.target.value })} placeholder="Label"
+                className="col-span-4 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
+              <select value={newItem.type} onChange={(e) => setNewItem({ ...newItem, type: e.target.value as PayrollItemType })}
+                className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
+                {(['EARNING', 'ALLOWANCE', 'DEDUCTION', 'TAX', 'BONUS'] as PayrollItemType[]).map(t => (
+                  <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
+                ))}
+              </select>
+              <input type="number" value={newItem.amount || ''} onChange={(e) => setNewItem({ ...newItem, amount: parseFloat(e.target.value) || 0 })} placeholder="₹"
+                className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
+              <button onClick={addItem} className="col-span-2 px-3 py-2 bg-[#0445AD] text-white rounded-lg text-xs font-semibold hover:bg-[#033080]">+ Add</button>
             </div>
           </div>
-        )}
-
-        {/* My Payslips */}
-        {activeTab === 'payslips' && (
-          <div className="payroll-item">
-            <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
-              {loading ? (
-                <div className="flex items-center justify-center h-48">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+          {items.length > 0 && (
+            <div className="space-y-2">
+              {items.map((item, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${ITEM_TYPE_COLORS[item.type]}`}>{item.type}</span>
+                  <span className="flex-1 text-sm font-medium">{item.label}</span>
+                  <span className={`text-sm font-bold ${item.type === 'DEDUCTION' || item.type === 'TAX' ? 'text-red-600' : 'text-green-600'}`}>
+                    {item.type === 'DEDUCTION' || item.type === 'TAX' ? '-' : '+'}₹{fmt(item.amount)}
+                  </span>
+                  <button onClick={() => removeItem(i)} className="p-1 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
                 </div>
-              ) : myPayslips.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                  <p className="text-gray-500">No payslips available</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-100">
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Month</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Pay Date</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Basic Salary</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Earnings</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Deductions</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Net Salary</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {myPayslips.map((payslip) => (
-                        <tr key={payslip.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4 font-medium">{payslip.monthName || formatMonth(payslip.month, payslip.year)}</td>
-                          <td className="py-3 px-4">{formatDate(payslip.payDate || " ")}</td>
-                          <td className="py-3 px-4">₹{payslip.basicSalary?.toLocaleString() || 0}</td>
-                          <td className="py-3 px-4 text-green-600">₹{payslip.allowances?.toLocaleString() || 0}</td>
-                          <td className="py-3 px-4 text-red-600">₹{payslip.deductions?.toLocaleString() || 0}</td>
-                          <td className="py-3 px-4 font-bold text-green-600">
-                            ₹{payslip.netSalary?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(payslip.status)}`}>
-                              {formatStatus(payslip.status)}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <button
-                              onClick={() => handleDownloadPayslip(payslip)}
-                              className="px-3 py-1 bg-green-500 text-white rounded text-xs font-semibold hover:bg-green-600"
-                            >
-                              View
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => onProcess(record.id, items)} disabled={loading}
+            className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Process Payroll
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-        {/* Generate Payroll */}
-        {activeTab === 'generate' && (
-          <div className="payroll-item">
-            <div className="mb-6 p-6 bg-white rounded-xl border-2 border-gray-100">
-              <div className="flex items-center justify-between">
+// ─────────────────────────────────────────────
+// ADJUST SINGLE USER MODAL
+// ─────────────────────────────────────────────
+const AdjustUserModal = ({
+  open, record, onClose, onAdjust, loading,
+}: {
+  open: boolean; record: PayrollRecord | null; onClose: () => void;
+  onAdjust: (payload: { payrollId: string; userId: string; month: number; year: number; leaveDeduction?: any; attendanceDeduction?: any }) => void; loading: boolean;
+}) => {
+  const [leaveEnabled, setLeaveEnabled] = useState(false);
+  const [leaveCount, setLeaveCount] = useState(0);
+  const [leaveAmount, setLeaveAmount] = useState(0);
+  const [attEnabled, setAttEnabled] = useState(false);
+  const [attCount, setAttCount] = useState(0);
+  const [attAmount, setAttAmount] = useState(0);
+
+  useEffect(() => {
+    if (record && open) {
+      setLeaveEnabled(false); setLeaveCount(0); setLeaveAmount(0);
+      setAttEnabled(false); setAttCount(0); setAttAmount(0);
+    }
+  }, [record, open]);
+
+  if (!open || !record) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-bold">Adjust Payroll</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{record.user?.name || record.employeeName} · {formatMonth(record.month, record.year)}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <input type="checkbox" checked={leaveEnabled} onChange={(e) => setLeaveEnabled(e.target.checked)}
+                className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+              <span className="text-sm font-semibold">Leave Deduction</span>
+            </div>
+            {leaveEnabled && (
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <h3 className="text-xl font-bold font-['Montserrat']">Generate Payroll</h3>
-                  <p className="text-gray-600 mt-1">Select month to generate payroll for all employees</p>
+                  <label className="text-xs text-gray-500 mb-1 block">Leave Count</label>
+                  <input type="number" value={leaveCount || ''} onChange={(e) => setLeaveCount(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
                 </div>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="px-4 py-2 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-                  />
-                  <button
-                    onClick={handleGeneratePayroll}
-                    disabled={generating}
-                    className="px-6 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {generating ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4" />
-                        Generate Payroll
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {payrollRecords.length > 0 && (
-              <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
-                <h3 className="text-xl font-bold mb-4 font-['Montserrat']">
-                  Payroll for {formatMonth(parseInt(selectedMonth.split('-')[1]), parseInt(selectedMonth.split('-')[0]))}
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b-2 border-gray-100">
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Employee</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Basic</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Gross</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Deductions</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Net</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold text-sm">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {payrollRecords
-                        .filter((p) => {
-                          const [year, month] = selectedMonth.split('-').map(Number);
-                          return p.year === year && p.month === month;
-                        })
-                        .map((record) => (
-                          <tr key={record.id} className="border-b border-gray-100">
-                            <td className="py-3 px-4 font-medium">{record.employeeName}</td>
-                            <td className="py-3 px-4">₹{record.basicSalary?.toLocaleString() || 0}</td>
-                            <td className="py-3 px-4">₹{record.grossSalary?.toLocaleString() || 0}</td>
-                            <td className="py-3 px-4 text-red-600">₹{(record.totalDeductions || 0).toLocaleString()}</td>
-                            <td className="py-3 px-4 font-bold text-green-600">₹{record.netSalary?.toLocaleString() || 0}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
-                                {formatStatus(record.status)}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              {record.status === 'DRAFT' && (
-                                <button
-                                  onClick={() => handleOpenProcessModal(record)}
-                                  className="px-3 py-1 bg-[#0445AD] text-white rounded text-xs font-semibold hover:bg-blue-700"
-                                >
-                                  Process
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
+                  <input type="number" value={leaveAmount || ''} onChange={(e) => setLeaveAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
                 </div>
               </div>
             )}
           </div>
-        )}
-
-        {/* Pay Structure */}
-        {activeTab === 'structure' && (
-          <div className="payroll-item">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold font-['Montserrat']">Pay Structure Configuration</h2>
-              <button
-                onClick={handleAddNewStructure}
-                className="px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add New
-              </button>
+          <div className="p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <input type="checkbox" checked={attEnabled} onChange={(e) => setAttEnabled(e.target.checked)}
+                className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+              <span className="text-sm font-semibold">Attendance Deduction</span>
             </div>
-            {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+            {attEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Absent Count</label>
+                  <input type="number" value={attCount || ''} onChange={(e) => setAttCount(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
+                  <input type="number" value={attAmount || ''} onChange={(e) => setAttAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
               </div>
-            ) : payStructures.length === 0 ? (
-              <div className="p-8 bg-white rounded-xl border-2 border-gray-100 text-center">
-                <Settings className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500">No pay structures configured</p>
-                <button
-                  onClick={handleAddNewStructure}
-                  className="mt-4 px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300"
-                >
-                  Add First Structure
-                </button>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={() => onAdjust({
+            payrollId: record.id, userId: record.userId,
+            month: record.month, year: record.year,
+            leaveDeduction: leaveEnabled ? { enabled: true, manualLeaveCount: leaveCount, manualAmountDeducted: leaveAmount } : undefined,
+            attendanceDeduction: attEnabled ? { enabled: true, manualAbsentCount: attCount, manualAmountDeducted: attAmount } : undefined,
+          })} disabled={loading}
+            className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Regenerate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// GENERATE PAYROLL MODAL
+// ─────────────────────────────────────────────
+const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
+  open: boolean; onClose: () => void;
+  onGenerate: (p: GeneratePayrollPayload) => void; loading: boolean;
+}) => {
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [leaveEnabled, setLeaveEnabled] = useState(false);
+  const [leaveCount, setLeaveCount] = useState(0);
+  const [leaveAmount, setLeaveAmount] = useState(0);
+  const [attEnabled, setAttEnabled] = useState(false);
+  const [attCount, setAttCount] = useState(0);
+  const [attAmount, setAttAmount] = useState(0);
+
+  const handleGenerate = () => {
+    onGenerate({
+      month, year,
+      leaveDeduction: leaveEnabled ? { enabled: true, manualLeaveCount: leaveCount, manualAmountDeducted: leaveAmount } : undefined,
+      attendanceDeduction: attEnabled ? { enabled: true, manualAbsentCount: attCount, manualAmountDeducted: attAmount } : undefined,
+    });
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-bold">Generate Payroll</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Create draft payroll for all eligible employees</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Month *</label>
+              <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Year *</label>
+              <select value={year} onChange={(e) => setYear(Number(e.target.value))}
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+                {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={leaveEnabled} onChange={(e) => setLeaveEnabled(e.target.checked)}
+                className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+              <span className="text-sm font-semibold text-gray-700">Leave Deduction</span>
+            </div>
+            {leaveEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Manual Leave Count</label>
+                  <input type="number" value={leaveCount || ''} onChange={(e) => setLeaveCount(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
+                  <input type="number" value={leaveAmount || ''} onChange={(e) => setLeaveAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {payStructures.map((structure) => {
-                  const deptName = departments.find(d => d.id === structure.departmentId)?.name;
-                  const desName = designations.find(d => d.id === structure.designationId)?.name;
-                  return (
-                    <div key={structure.id} className="p-6 bg-white rounded-xl border-2 border-gray-100 hover:border-black transition-all duration-300">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold font-['Montserrat']">{structure.name}</h3>
-                        <button
-                          onClick={() => handleEditStructure(structure)}
-                          className="p-2 text-gray-400 hover:text-[#0445AD] transition-colors"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
+            )}
+          </div>
+          <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={attEnabled} onChange={(e) => setAttEnabled(e.target.checked)}
+                className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+              <span className="text-sm font-semibold text-gray-700">Attendance Deduction</span>
+            </div>
+            {attEnabled && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Manual Absent Count</label>
+                  <input type="number" value={attCount || ''} onChange={(e) => setAttCount(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
+                  <input type="number" value={attAmount || ''} onChange={(e) => setAttAmount(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-3 px-6 pb-6">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+          <button onClick={handleGenerate} disabled={loading}
+            className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Generate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// PAYROLL DETAIL MODAL
+// ─────────────────────────────────────────────
+const PayrollDetailModal = ({ open, record, onClose, onAction }: {
+  open: boolean; record: PayrollRecord | null;
+  onClose: () => void;
+  onAction: (type: string, id: string) => void;
+  loading: boolean;
+}) => {
+  if (!open || !record) return null;
+
+  const items = record.items || [];
+  const earnings = items.filter(i => i.type === 'EARNING' || i.type === 'ALLOWANCE');
+  const deductions = items.filter(i => i.type === 'DEDUCTION' || i.type === 'TAX');
+  const bonuses = items.filter(i => i.type === 'BONUS');
+
+  const days = record.daysSummary;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+          <div>
+            <h2 className="text-lg font-bold">{record.user?.name || record.employeeName || 'Payroll Detail'}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{formatMonth(record.month, record.year)} · {record.user?.employeeCode || ''}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <StatusBadge status={record.status} />
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"><X className="w-5 h-5" /></button>
+          </div>
+        </div>
+        <div className="p-6 space-y-5">
+          {/* Employee Info */}
+          {record.user && (
+            <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl">
+              <div><p className="text-xs text-gray-400">Employee</p><p className="text-sm font-semibold">{record.user.name}</p></div>
+              <div><p className="text-xs text-gray-400">Department</p><p className="text-sm font-semibold">{record.user.department?.name || record.department || '—'}</p></div>
+              <div><p className="text-xs text-gray-400">Designation</p><p className="text-sm font-semibold">{record.user.designation?.name || record.designation || '—'}</p></div>
+            </div>
+          )}
+
+          {/* Salary Summary Cards */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Base Salary', value: record.baseSalary || record.basicSalary, color: 'text-gray-800' },
+              { label: 'Gross Salary', value: record.grossSalary, color: 'text-blue-700' },
+              { label: 'Total Earnings', value: record.totalEarnings, color: 'text-green-700' },
+              { label: 'Net Salary', value: record.netSalary, color: 'text-emerald-700', highlight: true },
+            ].map(({ label, value, color, highlight }) => (
+              <div key={label} className={`p-4 rounded-xl border ${highlight ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white'}`}>
+                <p className="text-xs text-gray-400 mb-1">{label}</p>
+                <p className={`text-lg font-bold ${color}`}>₹{fmt(value)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Total Allowances', value: record.totalAllowances },
+              { label: 'Total Deductions', value: record.totalDeductions, negative: true },
+              { label: 'Total Bonus', value: record.totalBonus },
+              { label: 'Total Tax', value: record.totalTax, negative: true },
+            ].map(({ label, value, negative }) => (
+              <div key={label} className="p-4 rounded-xl border border-gray-200 bg-white">
+                <p className="text-xs text-gray-400 mb-1">{label}</p>
+                <p className={`text-lg font-bold ${negative ? 'text-red-600' : 'text-gray-800'}`}>
+                  {negative ? '-' : ''}₹{fmt(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Days Summary */}
+          {days && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Attendance & Leave Summary</h4>
+              <div className="grid grid-cols-7 gap-2">
+                {[
+                  { label: 'Present', value: days.presentDays },
+                  { label: 'Absent', value: days.absentDays },
+                  { label: 'Late', value: days.lateCount },
+                  { label: 'Half Days', value: days.halfDays },
+                  { label: 'Payable', value: days.payableDays },
+                  { label: 'Paid Leaves', value: days.paidLeaves },
+                  { label: 'Unpaid', value: days.unpaidLeaves },
+                ].map(({ label, value }) => (
+                  <div key={label} className="text-center p-3 bg-gray-50 rounded-xl">
+                    <p className="text-lg font-bold text-gray-800">{value ?? 0}</p>
+                    <p className="text-xs text-gray-400">{label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Payroll Items */}
+          {items.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Salary Breakdown</h4>
+              {earnings.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Earnings & Allowances</p>
+                  <div className="space-y-1">
+                    {earnings.map((item, i) => (
+                      <div key={i} className="flex justify-between py-2 px-3 bg-green-50/50 rounded-lg text-sm">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className="font-semibold text-green-700">+₹{fmt(item.amount)}</span>
                       </div>
-                      {deptName && (
-                        <p className="text-sm text-gray-600 mb-1">Dept: {deptName}</p>
-                      )}
-                      {desName && (
-                        <p className="text-sm text-gray-600 mb-2">Designation: {desName}</p>
-                      )}
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Components:</span>
-                          <span className="font-semibold">{structure.components?.length || 0}</span>
-                        </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {deductions.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Deductions & Tax</p>
+                  <div className="space-y-1">
+                    {deductions.map((item, i) => (
+                      <div key={i} className="flex justify-between py-2 px-3 bg-red-50/50 rounded-lg text-sm">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className="font-semibold text-red-700">-₹{fmt(item.amount)}</span>
                       </div>
-                      {structure.isDefault && (
-                        <span className="mt-3 inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
-                          Default
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                </div>
+              )}
+              {bonuses.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Bonus</p>
+                  <div className="space-y-1">
+                    {bonuses.map((item, i) => (
+                      <div key={i} className="flex justify-between py-2 px-3 bg-purple-50/50 rounded-lg text-sm">
+                        <span className="text-gray-600">{item.label}</span>
+                        <span className="font-semibold text-purple-700">+₹{fmt(item.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payslip Placeholder */}
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm font-semibold text-blue-700">Payslip</p>
+                <p className="text-xs text-blue-400">Payslip generation will be available soon</p>
               </div>
+            </div>
+            <button disabled className="px-4 py-2 bg-blue-100 text-blue-400 rounded-lg text-xs font-semibold cursor-not-allowed">Download</button>
+          </div>
+        </div>
+
+        {/* Actions */}
+        {record.status !== 'PAID' && record.status !== 'CANCELLED' && (
+          <div className="flex items-center justify-end gap-2 px-6 pb-6 border-t border-gray-100 pt-4">
+            {record.status === 'DRAFT' && (
+              <button onClick={() => onAction('adjust', record.id)}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-1.5">
+                <Settings className="w-4 h-4" /> Adjust
+              </button>
+            )}
+            {(record.status === 'DRAFT') && (
+              <button onClick={() => onAction('process', record.id)}
+                className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold hover:bg-[#033080] flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" /> Process
+              </button>
+            )}
+            {record.status === 'PROCESSED' && (
+              <button onClick={() => onAction('disbursing', record.id)}
+                className="px-4 py-2 bg-yellow-500 text-white rounded-xl text-sm font-semibold hover:bg-yellow-600 flex items-center gap-1.5">
+                <ArrowRight className="w-4 h-4" /> Mark Disbursing
+              </button>
+            )}
+            {record.status === 'DISBURSING' && (
+              <button onClick={() => onAction('paid', record.id)}
+                className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 flex items-center gap-1.5">
+                <Check className="w-4 h-4" /> Mark Paid
+              </button>
+            )}
+            {(record.status as PayrollStatus) !== 'PAID' && (record.status as PayrollStatus) !== 'CANCELLED' && (
+              <button onClick={() => onAction('failed', record.id)}
+                className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 flex items-center gap-1.5">
+                <XCircle className="w-4 h-4" /> Mark Failed
+              </button>
             )}
           </div>
         )}
       </div>
+    </div>
+  );
+};
 
-      {/* Process Payroll Modal */}
-      {showProcessModal && currentPayroll && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">Process Payroll - {currentPayroll.employeeName}</h3>
-              <button onClick={() => setShowProcessModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Basic Salary:</span>
-                    <span className="ml-2 font-semibold">₹{currentPayroll.basicSalary?.toLocaleString() || 0}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Gross:</span>
-                    <span className="ml-2 font-semibold">₹{currentPayroll.grossSalary?.toLocaleString() || 0}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Net Salary:</span>
-                    <span className="ml-2 font-semibold text-green-600">₹{currentPayroll.netSalary?.toLocaleString() || 0}</span>
-                  </div>
-                </div>
-              </div>
+// ─────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────
+export default function PayrollPage() {
+  const dispatch = useAppDispatch();
+  const {
+    dashboardKPIs, componentMasters, payStructures, employeeOverrides,
+    payrollRecords,
+    loading, processing, generating, error, successMessage,
+  } = useAppSelector(s => s.payroll);
+  const { departments } = useAppSelector(s => s.departments);
+  const { designations } = useAppSelector(s => s.designations);
 
-              <h4 className="font-semibold mb-3">Add Additional Items</h4>
-              <div className="grid grid-cols-4 gap-3 mb-4">
-                <input
-                  type="text"
-                  placeholder="Label"
-                  value={newItem.label}
-                  onChange={(e) => setNewItem({ ...newItem, label: e.target.value })}
-                  className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                />
-                <select
-                  value={newItem.type}
-                  onChange={(e) => setNewItem({ ...newItem, type: e.target.value as 'EARNING' | 'DEDUCTION' })}
-                  className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                >
-                  <option value="EARNING">Earning</option>
-                  <option value="DEDUCTION">Deduction</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="Amount"
-                  value={newItem.amount || ''}
-                  onChange={(e) => setNewItem({ ...newItem, amount: parseFloat(e.target.value) || 0 })}
-                  className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                />
-                <button
-                  onClick={handleAddItem}
-                  className="px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-blue-700"
-                >
-                  Add
-                </button>
-              </div>
+  const now = new Date();
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [listMonth, setListMonth] = useState(now.getMonth() + 1);
+  const [listYear, setListYear] = useState(now.getFullYear());
+  const [listStatus, setListStatus] = useState<PayrollStatus | ''>('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showComponentModal, setShowComponentModal] = useState(false);
+  const [showStructureModal, setShowStructureModal] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<PayrollComponentMaster | null>(null);
+  const [editingStructure, setEditingStructure] = useState<PayStructure | null>(null);
+  const [deleteStructureId, setDeleteStructureId] = useState<string | null>(null);
+  const [detailRecord, setDetailRecord] = useState<PayrollRecord | null>(null);
+  const [processRecord, setProcessRecord] = useState<PayrollRecord | null>(null);
+  const [adjustRecord, setAdjustRecord] = useState<PayrollRecord | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string; variant: 'danger' | 'primary' } | null>(null);
+  const [overrideUser, setOverrideUser] = useState<UserSelectOption | null>(null);
+  const [overrideComponents, setOverrideComponents] = useState<EmployeePayrollComponent[]>([]);
+  const [overrideSearch, setOverrideSearch] = useState('');
+  const [userOptions, setUserOptions] = useState<UserSelectOption[]>([]);
+  const [localMsg, setLocalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-              {currentPayroll.components && currentPayroll.components.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold">Items</h4>
-                  {currentPayroll.components.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <span className={`px-2 py-1 text-xs rounded ${item.type === 'EARNING' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {item.type === 'EARNING' ? '+' : '-'}
-                        </span>
-                        <span className="font-semibold">{item.label}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={item.type === 'EARNING' ? 'text-green-600' : 'text-red-600'}>
-                          ₹{item.amount.toLocaleString()}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveItem(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+  useEffect(() => {
+    dispatch(fetchDashboardKPIs({ month: now.getMonth() + 1, year: now.getFullYear() }));
+    dispatch(fetchComponentMasters());
+    dispatch(fetchPayStructures());
+    dispatch(fetchAllPayrolls({}));
+    dispatch(fetchDepartments());
+    dispatch(fetchDesignations());
+  }, [dispatch]);
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleProcessPayroll}
-                  disabled={processing}
-                  className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
-                >
-                  {processing ? 'Processing...' : 'Process Payroll'}
-                </button>
-                <button
-                  onClick={() => setShowProcessModal(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+  useEffect(() => {
+    if (successMessage) { setLocalMsg({ type: 'success', text: successMessage }); dispatch(clearPayrollSuccess()); }
+    if (error) { setLocalMsg({ type: 'error', text: error }); dispatch(clearPayrollError()); }
+  }, [successMessage, error, dispatch]);
+
+  useEffect(() => {
+    if (localMsg) { const t = setTimeout(() => setLocalMsg(null), 4000); return () => clearTimeout(t); }
+  }, [localMsg]);
+
+  // Load user options when overrides tab is opened
+  useEffect(() => {
+    if (activeTab === 'overrides') {
+      dispatch(fetchUserSelectOptions()).then((r: any) => {
+        if (fetchUserSelectOptions.fulfilled.match(r)) setUserOptions(r.payload || []);
+      });
+    }
+  }, [activeTab, dispatch]);
+
+  const kpis = dashboardKPIs;
+  const filteredRecords = payrollRecords.filter(r => {
+    const term = searchTerm.toLowerCase();
+    if (term && !(r.user?.name || r.employeeName || '').toLowerCase().includes(term)) return false;
+    if (listMonth && r.month !== listMonth) return false;
+    if (listYear && r.year !== listYear) return false;
+    if (listStatus && r.status !== listStatus) return false;
+    return true;
+  });
+
+  // ── Handlers ──────────────────────────────────────────
+
+  const handleSaveComponent = async (form: CreateComponentMasterPayload) => {
+    const result = await dispatch(createComponentMaster(form));
+    if (createComponentMaster.fulfilled.match(result)) {
+      setShowComponentModal(false); setEditingComponent(null);
+      dispatch(fetchComponentMasters());
+    }
+  };
+
+  const handleSaveStructure = async (form: CreatePayStructurePayload) => {
+    if (editingStructure?.id) {
+      const result = await dispatch(updatePayStructure({ id: editingStructure.id, payload: form }));
+      if (updatePayStructure.fulfilled.match(result)) { setShowStructureModal(false); setEditingStructure(null); dispatch(fetchPayStructures()); }
+    } else {
+      const result = await dispatch(createPayStructure(form));
+      if (createPayStructure.fulfilled.match(result)) { setShowStructureModal(false); dispatch(fetchPayStructures()); }
+    }
+  };
+
+  const handleDeleteStructure = async () => {
+    if (!deleteStructureId) return;
+    const result = await dispatch(deletePayStructure(deleteStructureId));
+    if (deletePayStructure.fulfilled.match(result)) {
+      setDeleteStructureId(null);
+      dispatch(fetchPayStructures());
+    }
+  };
+
+  const handleGenerate = async (payload: GeneratePayrollPayload) => {
+    const result = await dispatch(generatePayroll(payload));
+    if (generatePayroll.fulfilled.match(result)) {
+      setShowGenerateModal(false);
+      dispatch(fetchDashboardKPIs({ month: payload.month, year: payload.year }));
+      dispatch(fetchAllPayrolls({ month: payload.month, year: payload.year }));
+      setActiveTab('listing');
+    }
+  };
+
+  const handleAdjustUser = async (payload: any) => {
+    const result = await dispatch(generateSingleUserPayroll({
+      userId: payload.userId, month: payload.month, year: payload.year,
+      leaveDeduction: payload.leaveDeduction, attendanceDeduction: payload.attendanceDeduction,
+    }));
+    if (generateSingleUserPayroll.fulfilled.match(result)) {
+      setShowAdjustModal(false); setAdjustRecord(null);
+    }
+  };
+
+  const handleProcess = async (payrollId: string, items: PayrollItem[]) => {
+    const result = await dispatch(processPayroll({ payrollId, items }));
+    if (processPayroll.fulfilled.match(result)) { setShowProcessModal(false); setProcessRecord(null); }
+  };
+
+  const handleAction = (type: string, id: string) => {
+    if (type === 'process') { setProcessRecord(payrollRecords.find(r => r.id === id) || null); setShowProcessModal(true); }
+    else if (type === 'adjust') { setAdjustRecord(payrollRecords.find(r => r.id === id) || null); setShowAdjustModal(true); }
+    else if (['disbursing', 'paid', 'failed'].includes(type)) {
+      const labels: Record<string, string> = { disbursing: 'Mark as Disbursing', paid: 'Mark as Paid', failed: 'Mark as Failed' };
+      const variants: Record<string, 'danger' | 'primary'> = { disbursing: 'primary', paid: 'primary', failed: 'danger' };
+      setConfirmAction({ type, id, label: labels[type], variant: variants[type] });
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    const { type, id } = confirmAction;
+    let result;
+    if (type === 'disbursing') result = await dispatch(markPayrollDisbursing(id));
+    else if (type === 'paid') result = await dispatch(markPayrollPaid(id));
+    else if (type === 'failed') result = await dispatch(markPayrollFailed(id));
+    if (result && (result as any).meta.requestStatus === 'fulfilled') setConfirmAction(null);
+  };
+
+  const handleViewDetail = async (record: PayrollRecord) => {
+    setDetailRecord(record);
+    setShowDetailModal(true);
+  };
+
+  // Employee Overrides
+  const handleSelectOverrideUser = async (user: UserSelectOption) => {
+    setOverrideUser(user);
+    const result = await dispatch(fetchEmployeeOverrides(user.id));
+    if (fetchEmployeeOverrides.fulfilled.match(result)) {
+      setOverrideComponents((result as any).payload.components || []);
+    }
+  };
+
+  const handleAddOverride = () => {
+    if (componentMasters.length === 0) return;
+    setOverrideComponents([...overrideComponents, {
+      payrollComponentMasterId: componentMasters[0].id!,
+      valueType: 'FLAT', value: 0, isActive: true, remarks: '',
+    }]);
+  };
+
+  const handleSaveOverrides = async () => {
+    if (!overrideUser) return;
+    await dispatch(saveEmployeeOverrides({ userId: overrideUser.id, components: overrideComponents }));
+  };
+
+  const overrideFilteredUsers = userOptions.filter(u =>
+    (u.name || u.email || '').toLowerCase().includes(overrideSearch.toLowerCase())
+  );
+
+  return (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Manage salaries, structures, and payroll processing</p>
+        </div>
+        <button onClick={() => setShowGenerateModal(true)}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#0445AD] hover:bg-[#033080] text-white rounded-xl text-sm font-semibold transition shadow-sm">
+          <Plus className="w-4 h-4" /> Generate Payroll
+        </button>
+      </div>
+
+      {/* Alerts */}
+      {localMsg && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm ${localMsg.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {localMsg.type === 'success' ? <CheckCircle className="w-5 h-5 shrink-0" /> : <XCircle className="w-5 h-5 shrink-0" />}
+          <span className="flex-1">{localMsg.text}</span>
+          <button onClick={() => setLocalMsg(null)}><X className="w-4 h-4" /></button>
         </div>
       )}
 
-      {/* Payslip Modal */}
-      {showPayslipModal && selectedPayslip && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">Payslip - {formatMonth(selectedPayslip.month, selectedPayslip.year)}</h3>
-              <button onClick={() => setShowPayslipModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="mb-6 text-center">
-                <p className="text-sm text-gray-600">Employee</p>
-                <p className="text-lg font-bold">{selectedPayslip.employeeName || 'You'}</p>
-              </div>
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <div className="flex gap-6 overflow-x-auto">
+          {([
+            { key: 'dashboard', label: 'Dashboard' },
+            { key: 'components', label: 'Components' },
+            { key: 'structures', label: 'Structures' },
+            { key: 'overrides', label: 'Overrides' },
+            { key: 'listing', label: 'All Payrolls' },
+          ] as { key: AdminTab; label: string }[]).map(({ key, label }) => (
+            <button key={key} onClick={() => setActiveTab(key)}
+              className={`pb-3 px-1 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${activeTab === key ? 'border-[#0445AD] text-[#0445AD]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Basic Salary</span>
-                  <span className="font-semibold">₹{selectedPayslip.basicSalary?.toLocaleString() || 0}</span>
+      {/* ── DASHBOARD TAB ─────────────────────────────────── */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-5">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { icon: DollarSign, label: 'Total Payroll', value: `₹${fmt(kpis?.totalPayroll)}`, bg: 'bg-[#0445AD]', sub: `${filteredRecords.length} records` },
+              { icon: CheckCircle, label: 'Processed', value: kpis?.processedCount ?? 0, bg: 'bg-green-500', sub: 'employees' },
+              { icon: Clock, label: 'Pending', value: kpis?.pendingCount ?? 0, bg: 'bg-yellow-500', sub: 'drafts' },
+              { icon: AlertCircle, label: 'Failed', value: kpis?.failedCount ?? 0, bg: 'bg-red-500', sub: 'records' },
+              { icon: Users, label: 'Avg. Salary', value: `₹${fmt(kpis?.averageSalary)}`, bg: 'bg-purple-500', sub: 'per employee' },
+            ].map(({ icon: Icon, label, value, bg, sub }) => (
+              <div key={label} className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center`}><Icon className="w-5 h-5 text-white" /></div>
+                  <span className="text-xs text-gray-400">{sub}</span>
                 </div>
-                {selectedPayslip.components?.map((item: PayrollItem, index: number) => (
-                  <div key={index} className="flex justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-600">{item.label}</span>
-                    <span className={item.type === 'EARNING' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
-                      {item.type === 'EARNING' ? '+' : '-'}₹{item.amount.toLocaleString()}
-                    </span>
+                <p className="text-2xl font-bold text-gray-900">{value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <button onClick={() => { setEditingComponent(null); setShowComponentModal(true); }}
+              className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#0445AD] transition">
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center"><Settings className="w-5 h-5 text-blue-600" /></div>
+              <div className="text-left"><p className="text-sm font-semibold text-gray-800">Create Component</p><p className="text-xs text-gray-400">Add salary component master</p></div>
+            </button>
+            <button onClick={() => { setEditingStructure(null); setShowStructureModal(true); }}
+              className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#0445AD] transition">
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center"><FileText className="w-5 h-5 text-green-600" /></div>
+              <div className="text-left"><p className="text-sm font-semibold text-gray-800">Create Structure</p><p className="text-xs text-gray-400">Define pay structure template</p></div>
+            </button>
+            <button onClick={() => setShowGenerateModal(true)}
+              className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#0445AD] transition">
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center"><DollarSign className="w-5 h-5 text-amber-600" /></div>
+              <div className="text-left"><p className="text-sm font-semibold text-gray-800">Generate Payroll</p><p className="text-xs text-gray-400">Run monthly payroll</p></div>
+            </button>
+          </div>
+
+          {/* Recent Payrolls */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-800">Recent Payroll Records</h3>
+              <button onClick={() => setActiveTab('listing')} className="text-xs text-[#0445AD] font-semibold hover:underline">View All →</button>
+            </div>
+            {payrollRecords.length === 0 ? (
+              <div className="p-8 text-center text-sm text-gray-400">No payroll records yet</div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {payrollRecords.slice(0, 5).map(r => (
+                  <div key={r.id} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition">
+                    <div className="w-8 h-8 bg-[#0445AD]/10 rounded-lg flex items-center justify-center text-xs font-bold text-[#0445AD]">
+                      {(r.user?.name || r.employeeName || 'U').charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{r.user?.name || r.employeeName}</p>
+                      <p className="text-xs text-gray-400">{formatMonth(r.month, r.year)}</p>
+                    </div>
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-bold text-gray-800">₹{fmt(r.netSalary)}</p>
+                      <p className="text-xs text-gray-400">net salary</p>
+                    </div>
+                    <StatusBadge status={r.status} />
                   </div>
                 ))}
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Gross Salary</span>
-                  <span className="font-semibold">₹{selectedPayslip.grossSalary?.toLocaleString() || 0}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100 text-red-600">
-                  <span>Deductions</span>
-                  <span className="font-semibold">-₹{(selectedPayslip.totalDeductions || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between py-3 bg-green-50 px-4 rounded-lg">
-                  <span className="font-bold text-green-700">Net Salary</span>
-                  <span className="font-bold text-green-700">₹{selectedPayslip.netSalary?.toLocaleString() || 0}</span>
-                </div>
               </div>
-
-              <div className="flex gap-3 mt-6">
-                <button className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-300 flex items-center justify-center gap-2">
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
-                <button
-                  onClick={() => setShowPayslipModal(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-300"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Pay Structure Modal */}
-      {showStructureModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800">
-                {editingStructure ? 'Edit Pay Structure' : 'Add New Pay Structure'}
-              </h3>
-              <button onClick={() => setShowStructureModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
+      {/* ── COMPONENTS TAB ────────────────────────────────── */}
+      {activeTab === 'components' && (
+        <div className="space-y-4">
+          <SectionHeader
+            title="Component Masters"
+            subtitle="Define reusable salary components like Basic, HRA, Allowances, Deductions, Tax, Bonus"
+            action={
+              <button onClick={() => { setEditingComponent(null); setShowComponentModal(true); }}
+                className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
+                <Plus className="w-4 h-4" /> Add Component
               </button>
+            }
+          />
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)}
             </div>
-            <form onSubmit={handleSaveStructure} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Structure Name</label>
-                  <input
-                    type="text"
-                    value={structureForm.name}
-                    onChange={(e) => setStructureForm({ ...structureForm, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                    placeholder="e.g., Engineering Structure"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Department</label>
-                  <select
-                    value={structureForm.departmentId}
-                    onChange={(e) => setStructureForm({ ...structureForm, departmentId: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Designation</label>
-                  <select
-                    value={structureForm.designationId}
-                    onChange={(e) => setStructureForm({ ...structureForm, designationId: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                  >
-                    <option value="">Select Designation</option>
-                    {designations.map((des) => (
-                      <option key={des.id} value={des.id}>
-                        {des.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-center justify-center">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={structureForm.isDefault}
-                      onChange={(e) => setStructureForm({ ...structureForm, isDefault: e.target.checked })}
-                      className="w-4 h-4 text-[#0445AD] border-gray-300 rounded focus:ring-[#0445AD]"
-                    />
-                    <span className="text-sm font-semibold">Set as Default</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold">Components</h4>
-                  <button
-                    type="button"
-                    onClick={handleAddStructureComponent}
-                    className="px-3 py-1 bg-[#0445AD] text-white rounded text-sm font-semibold hover:bg-blue-700"
-                  >
-                    + Add Component
-                  </button>
-                </div>
-
-                {structureForm.components.length === 0 && (
-                  <p className="text-center text-gray-500 py-4">No components added yet</p>
-                )}
-
-                {structureForm.components.map((component, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg mb-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold">Component {index + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveStructureComponent(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="w-4 h-4" />
+          ) : componentMasters.length === 0 ? (
+            <EmptyState icon={Settings} title="No component masters" subtitle="Create your first salary component" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {componentMasters.map(c => (
+                <div key={c.id} className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${ITEM_TYPE_COLORS[c.type as PayrollItemType] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className="text-xs font-bold">{c.name.charAt(0)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {c.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                      <button onClick={() => { setEditingComponent(c); setShowComponentModal(true); }} className="p-1 text-gray-400 hover:text-[#0445AD] rounded hover:bg-gray-100">
+                        <Settings className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Label (e.g., Basic Pay)"
-                        value={component.label}
-                        onChange={(e) => handleUpdateStructureComponent(index, 'label', e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                        required
-                      />
-                      <select
-                        value={component.componentType}
-                        onChange={(e) => handleUpdateStructureComponent(index, 'componentType', e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                      >
-                        <option value="BASIC">Basic</option>
-                        <option value="HRA">HRA</option>
-                        <option value="DA">DA</option>
-                        <option value="ALLOWANCE">Allowance</option>
-                        <option value="BONUS">Bonus</option>
-                        <option value="DEDUCTION">Deduction</option>
-                        <option value="OTHER">Other</option>
-                      </select>
-                      <select
-                        value={component.valueType}
-                        onChange={(e) => handleUpdateStructureComponent(index, 'valueType', e.target.value)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                      >
-                        <option value="FLAT">Fixed Amount</option>
-                        <option value="PERCENTAGE">Percentage</option>
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="Value"
-                        value={component.value}
-                        onChange={(e) => handleUpdateStructureComponent(index, 'value', parseFloat(e.target.value) || 0)}
-                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-[#0445AD]"
-                        required
-                      />
-                      <div className="col-span-2 flex gap-4">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={component.isTaxable}
-                            onChange={(e) => handleUpdateStructureComponent(index, 'isTaxable', e.target.checked)}
-                            className="w-4 h-4 text-[#0445AD] border-gray-300 rounded focus:ring-[#0445AD]"
-                          />
-                          <span className="text-sm">Taxable</span>
-                        </label>
-                      </div>
+                  </div>
+                  <h3 className="text-sm font-bold text-gray-800 mb-1">{c.name}</h3>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{c.type}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{c.valueType === 'PERCENTAGE_OF_BASIC' ? '% of Basic' : 'Fixed'}</span>
+                    {c.isTaxable && <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">Taxable</span>}
+                    {c.isOptional && <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded text-xs">Optional</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STRUCTURES TAB ────────────────────────────────── */}
+      {activeTab === 'structures' && (
+        <div className="space-y-4">
+          <SectionHeader
+            title="Pay Structures"
+            subtitle="Define company-wide or department/designation-wise salary templates"
+            action={
+              <button onClick={() => { setEditingStructure(null); setShowStructureModal(true); }}
+                className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
+                <Plus className="w-4 h-4" /> Add Structure
+              </button>
+            }
+          />
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <div key={i} className="h-36 bg-gray-100 rounded-2xl animate-pulse" />)}
+            </div>
+          ) : payStructures.length === 0 ? (
+            <EmptyState icon={FileText} title="No pay structures configured" subtitle="Create your first structure" />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {payStructures.map(s => (
+                <div key={s.id} className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-800">{s.name}</h3>
+                      {s.departmentName && <p className="text-xs text-gray-400">{s.departmentName}</p>}
+                      {s.designationName && <p className="text-xs text-gray-400">{s.designationName}</p>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => { setEditingStructure(s); setShowStructureModal(true); }}
+                        className="p-1.5 text-gray-400 hover:text-[#0445AD] rounded hover:bg-blue-50" title="Edit">
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeleteStructureId(s.id!)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-red-50" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {s.isDefault && <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-semibold">Default</span>}
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${s.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                      {s.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500">{s.components?.length ?? 0} components</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {(s.components || []).slice(0, 3).map((c, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-gray-50 text-gray-500 rounded text-xs">{c.payrollMasterComponent?.name || c.componentMaster?.name || c.payrollMasterComponentId?.slice(0, 8)}</span>
+                    ))}
+                    {(s.components || []).length > 3 && <span className="text-xs text-gray-400">+{s.components.length - 3} more</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── OVERRIDES TAB ─────────────────────────────────── */}
+      {activeTab === 'overrides' && (
+        <div className="space-y-4">
+          <SectionHeader
+            title="Employee Payroll Overrides"
+            subtitle="Set employee-specific salary component values that override the default pay structure"
+          />
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input value={overrideSearch} onChange={(e) => setOverrideSearch(e.target.value)} placeholder="Search employee..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" />
+              </div>
+            </div>
+            {!overrideUser ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                {overrideFilteredUsers.slice(0, 20).map(u => (
+                  <button key={u.id} onClick={() => handleSelectOverrideUser(u)}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-[#0445AD] hover:bg-blue-50/30 transition text-left">
+                    <div className="w-8 h-8 bg-[#0445AD]/10 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
+                      {(u.name || 'U').charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                    </div>
+                  </button>
                 ))}
               </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 disabled:opacity-50"
-                >
-                  {loading ? 'Saving...' : 'Save Structure'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowStructureModal(false)}
-                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all duration-300"
-                >
-                  Cancel
-                </button>
+            ) : (
+              <div>
+                <div className="flex items-center gap-3 p-3 bg-[#0445AD]/5 border border-[#0445AD]/20 rounded-xl mb-4">
+                  <div className="w-8 h-8 bg-[#0445AD]/20 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
+                    {(overrideUser.name || 'U').charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-800">{overrideUser.name}</p>
+                    <p className="text-xs text-gray-400">{overrideUser.email}</p>
+                  </div>
+                  <button onClick={() => { setOverrideUser(null); setOverrideComponents([]); setOverrideSearch(''); }}
+                    className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
+                </div>
+                {overrideComponents.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-4">No overrides set. This employee uses the default structure.</p>
+                )}
+                <div className="space-y-2 mb-4">
+                  {overrideComponents.map((c, i) => (
+                    <div key={i} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-xl items-center">
+                      <select value={c.payrollComponentMasterId} onChange={(e) => {
+                        const updated = [...overrideComponents];
+                        updated[i] = { ...updated[i], payrollComponentMasterId: e.target.value };
+                        setOverrideComponents(updated);
+                      }}
+                        className="col-span-5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
+                          <option value="">Select component</option>
+                          {componentMasters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                        <select value={c.valueType} onChange={(e) => {
+                          const updated = [...overrideComponents]; updated[i] = { ...updated[i], valueType: e.target.value as PayStructureValueType };
+                          setOverrideComponents(updated);
+                        }}
+                          className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
+                          <option value="FLAT">Fixed</option>
+                          <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
+                        </select>
+                        <input type="number" value={c.value || ''} onChange={(e) => {
+                          const updated = [...overrideComponents]; updated[i] = { ...updated[i], value: parseFloat(e.target.value) || 0 };
+                          setOverrideComponents(updated);
+                        }}
+                          className="col-span-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
+                        <label className="col-span-1 flex items-center justify-center cursor-pointer">
+                          <input type="checkbox" checked={c.isActive} onChange={(e) => {
+                            const updated = [...overrideComponents]; updated[i] = { ...updated[i], isActive: e.target.checked };
+                            setOverrideComponents(updated);
+                          }}
+                            className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+                        </label>
+                        <button onClick={() => setOverrideComponents(overrideComponents.filter((_, idx) => idx !== i))}
+                          className="col-span-1 p-1.5 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                      </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleAddOverride}
+                    className="px-4 py-2 border border-dashed border-gray-300 text-gray-500 rounded-xl text-sm font-medium hover:border-[#0445AD] hover:text-[#0445AD] flex items-center gap-1">
+                    <Plus className="w-4 h-4" /> Add Override
+                  </button>
+                  <button onClick={handleSaveOverrides} disabled={loading}
+                    className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold hover:bg-[#033080] disabled:opacity-50 flex items-center gap-2">
+                    {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Save Overrides
+                  </button>
+                </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
+
+      {/* ── LISTING TAB ───────────────────────────────────── */}
+      {activeTab === 'listing' && (
+        <div className="space-y-4">
+          {/* Filters */}
+          <div className="flex items-center gap-3 flex-wrap bg-white rounded-2xl border border-gray-200 p-4">
+            <select value={listMonth} onChange={(e) => setListMonth(Number(e.target.value))}
+              className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+              <option value="">All Months</option>
+              {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <select value={listYear} onChange={(e) => setListYear(Number(e.target.value))}
+              className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+              <option value="">All Years</option>
+              {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <select value={listStatus} onChange={(e) => setListStatus(e.target.value as PayrollStatus | '')}
+              className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
+              <option value="">All Statuses</option>
+              {(['DRAFT', 'PROCESSED', 'DISBURSING', 'PAID', 'FAILED', 'CANCELLED'] as PayrollStatus[]).map(s => (
+                <option key={s} value={s}>{s.charAt(0) + s.slice(1).toLowerCase()}</option>
+              ))}
+            </select>
+            <div className="relative flex-1 min-w-40">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search employee..."
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" />
+            </div>
+            <button onClick={() => dispatch(fetchAllPayrolls({}))}
+              className="p-2.5 text-gray-500 hover:text-[#0445AD] border border-gray-200 rounded-xl hover:bg-blue-50" title="Refresh">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Table */}
+          {loading ? (
+            <div className="space-y-3"><div className="h-14 bg-gray-100 rounded-xl animate-pulse" /><div className="h-14 bg-gray-100 rounded-xl animate-pulse" /></div>
+          ) : filteredRecords.length === 0 ? (
+            <EmptyState icon={DollarSign} title="No payroll records found" subtitle="Try adjusting filters or generate payroll" />
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead><tr className="bg-gray-50 border-b border-gray-200">
+                    {['Employee', 'Month', 'Gross', 'Deductions', 'Net Salary', 'Status', 'Actions'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredRecords.map(r => (
+                      <tr key={r.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-[#0445AD]/10 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
+                              {(r.user?.name || r.employeeName || 'U').charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">{r.user?.name || r.employeeName}</p>
+                              <p className="text-xs text-gray-400">{r.user?.employeeCode || r.employeeEmail || ''}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatMonth(r.month, r.year)}</td>
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800">₹{fmt(r.grossSalary)}</td>
+                        <td className="px-4 py-3.5 text-sm text-red-600">₹{fmt(r.totalDeductions)}</td>
+                        <td className="px-4 py-3.5 text-sm font-bold text-green-700">₹{fmt(r.netSalary)}</td>
+                        <td className="px-4 py-3.5"><StatusBadge status={r.status} /></td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleViewDetail(r)}
+                              className="p-1.5 text-gray-400 hover:text-[#0445AD] border border-gray-200 rounded-lg hover:bg-blue-50" title="View">
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {r.status === 'DRAFT' && (
+                              <button onClick={() => { setAdjustRecord(r); setShowAdjustModal(true); }}
+                                className="p-1.5 text-gray-400 hover:text-yellow-600 border border-gray-200 rounded-lg hover:bg-yellow-50" title="Adjust">
+                                <Settings className="w-4 h-4" />
+                              </button>
+                            )}
+                            {(r.status === 'DRAFT') && (
+                              <button onClick={() => { setProcessRecord(r); setShowProcessModal(true); }}
+                                className="px-2.5 py-1 bg-[#0445AD] text-white rounded-lg text-xs font-semibold hover:bg-[#033080]" title="Process">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {r.status === 'PROCESSED' && (
+                              <button onClick={() => handleAction('disbursing', r.id)}
+                                className="px-2.5 py-1 bg-yellow-500 text-white rounded-lg text-xs font-semibold hover:bg-yellow-600">Disburse</button>
+                            )}
+                            {r.status === 'DISBURSING' && (
+                              <button onClick={() => handleAction('paid', r.id)}
+                                className="px-2.5 py-1 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600">Paid</button>
+                            )}
+                            {r.status !== 'PAID' && r.status !== 'CANCELLED' && (
+                              <button onClick={() => handleAction('failed', r.id)}
+                                className="p-1.5 text-red-400 hover:text-red-600 border border-red-200 rounded-lg hover:bg-red-50" title="Failed">
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── MODALS ────────────────────────────────────────── */}
+      <ComponentMasterModal
+        open={showComponentModal} editing={editingComponent}
+        onClose={() => { setShowComponentModal(false); setEditingComponent(null); }}
+        onSave={handleSaveComponent} loading={loading}
+      />
+
+      <PayStructureModal
+        open={showStructureModal} editing={editingStructure}
+        departments={departments} designations={designations}
+        components={componentMasters}
+        onClose={() => { setShowStructureModal(false); setEditingStructure(null); }}
+        onSave={handleSaveStructure} loading={loading}
+      />
+
+      <GeneratePayrollModal
+        open={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        onGenerate={handleGenerate} loading={generating}
+      />
+
+      <ProcessPayrollModal
+        open={showProcessModal} record={processRecord}
+        onClose={() => { setShowProcessModal(false); setProcessRecord(null); }}
+        onProcess={handleProcess} loading={processing}
+      />
+
+      <AdjustUserModal
+        open={showAdjustModal} record={adjustRecord}
+        onClose={() => { setShowAdjustModal(false); setAdjustRecord(null); }}
+        onAdjust={handleAdjustUser} loading={processing}
+      />
+
+      <PayrollDetailModal
+        open={showDetailModal} record={detailRecord}
+        onClose={() => { setShowDetailModal(false); setDetailRecord(null); }}
+        onAction={handleAction} loading={processing}
+      />
+
+      <ConfirmModal
+        open={!!confirmAction}
+        title={confirmAction?.label || 'Confirm Action'}
+        message="Are you sure you want to perform this action? This will update the payroll status."
+        confirmLabel={confirmAction?.label || 'Confirm'}
+        confirmVariant={confirmAction?.variant}
+        loading={processing}
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      <ConfirmModal
+        open={!!deleteStructureId}
+        title="Delete Pay Structure"
+        message="Are you sure you want to delete this pay structure? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        loading={loading}
+        onConfirm={handleDeleteStructure}
+        onCancel={() => setDeleteStructureId(null)}
+      />
     </div>
   );
 }
