@@ -6,7 +6,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 export type PayrollStatus = 'DRAFT' | 'PROCESSED' | 'DISBURSING' | 'PAID' | 'FAILED' | 'CANCELLED';
 export type PayrollItemType = 'EARNING' | 'ALLOWANCE' | 'DEDUCTION' | 'TAX' | 'BONUS';
-export type PayStructureValueType = 'FLAT' | 'PERCENTAGE_OF_BASIC';
+export type PayStructureValueType = 'PERCENTAGE_OF_BASIC' | 'COMPANY_FIXED' | 'EMPLOYEE_FIXED' | 'CUSTOM';
 export type PayrollComponentFreq = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
 export type PayrollComponentType = 'EARNING' | 'ALLOWANCE' | 'DEDUCTION' | 'TAX' | 'BONUS';
 
@@ -24,6 +24,7 @@ export interface PayrollComponentMaster {
   isActive: boolean;
   frequency?: PayrollComponentFreq;
   description?: string;
+  defaultValue?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -35,6 +36,7 @@ export interface CreateComponentMasterPayload {
   isTaxable: boolean;
   isOptional: boolean;
   isActive: boolean;
+  defaultValue?: number;
 }
 
 // =============================================
@@ -267,6 +269,35 @@ export interface ProcessPayrollPayload {
 }
 
 // =============================================
+// TYPES - EMPLOYEES (for overrides section)
+// =============================================
+
+export interface EmployeeProfile {
+  employeeCode: string;
+  salary?: number;
+  joiningDate?: string;
+  employmentType?: string;
+}
+
+export interface BankAccount {
+  accountHolderName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  bankName?: string;
+  isVerified?: boolean;
+}
+
+export interface EmployeeInfo {
+  id: string;
+  name?: string;
+  email?: string;
+  department?: { id: string; name: string };
+  designation?: { id: string; name: string };
+  employeeProfile?: EmployeeProfile;
+  bankAccount?: BankAccount;
+}
+
+// =============================================
 // REDUX STATE
 // =============================================
 
@@ -278,7 +309,7 @@ export interface PayrollState {
   // Pay Structures
   payStructures: PayStructure[];
   // Employee Overrides
-  employeeOverrides: Record<string, EmployeePayrollComponent[]>;
+  employeeOverrides: Record<string, EmployeePayrollOverride>;
   overrideEmployeeName: Record<string, string>;
   // Payroll Records
   payrollRecords: PayrollRecord[];
@@ -289,6 +320,8 @@ export interface PayrollState {
   myPayslipDetail: PayrollRecord | null;
   // Employee payroll components (for employee self-service view)
   employeePayrollComponents: EmployeePayrollComponentsDetail | null;
+  // All employees list (for overrides section)
+  allEmployees: EmployeeInfo[];
   // UI State
   loading: boolean;
   processing: boolean;
@@ -310,6 +343,7 @@ const initialState: PayrollState = {
   myPayslips: [],
   myPayslipDetail: null,
   employeePayrollComponents: null,
+  allEmployees: [],
   loading: false,
   processing: false,
   generating: false,
@@ -536,11 +570,30 @@ export const deletePayStructure = createAsyncThunk<
 });
 
 // =============================================
+// THUNKS - EMPLOYEES LIST (for overrides section)
+// =============================================
+
+export const fetchAllEmployees = createAsyncThunk<
+  EmployeeInfo[],
+  void,
+  { rejectValue: string }
+>('payroll/fetchAllEmployees', async (_, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/all-employees`, { headers: authHeaders() });
+    const json = await res.json();
+    if (!res.ok) return rejectWithValue(json.message || 'Failed to fetch employees');
+    return json.data || json || [];
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
+// =============================================
 // THUNKS - EMPLOYEE PAYROLL OVERRIDES
 // =============================================
 
 export const fetchEmployeeOverrides = createAsyncThunk<
-  { userId: string; components: EmployeePayrollComponent[]; employeeName?: string },
+  EmployeePayrollOverride,
   string,
   { rejectValue: string }
 >('payroll/fetchEmployeeOverrides', async (userId, { rejectWithValue }) => {
@@ -548,14 +601,27 @@ export const fetchEmployeeOverrides = createAsyncThunk<
     const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch employee overrides');
-    return { userId, components: data.data || data.components || [], employeeName: data.employeeName };
+    const components: EmployeePayrollComponent[] = Array.isArray(data.data)
+      ? data.data.map((item: any) => ({
+          id: item.id,
+          payrollMasterComponentId: item.payrollMasterComponentId,
+          payrollMasterComponent: item.payrollMasterComponent,
+          payrollComponentMasterId: item.payrollMasterComponentId,
+          componentMaster: item.payrollMasterComponent,
+          valueType: item.valueType,
+          value: item.value,
+          isActive: item.isActive,
+          remarks: item.remarks,
+        }))
+      : [];
+    return { userId, components, employeeName: data.employeeName };
   } catch {
     return rejectWithValue('Network error.');
   }
 });
 
 export const saveEmployeeOverrides = createAsyncThunk<
-  { userId: string; components: EmployeePayrollComponent[] },
+  EmployeePayrollOverride,
   { userId: string; components: EmployeePayrollComponent[] },
   { rejectValue: string }
 >('payroll/saveEmployeeOverrides', async ({ userId, components }, { rejectWithValue }) => {
@@ -567,7 +633,7 @@ export const saveEmployeeOverrides = createAsyncThunk<
     });
     const data = await res.json();
     if (!res.ok) return rejectWithValue(data.message || 'Failed to save employee overrides');
-    return { userId, components: data.data || data.components || [] };
+    return { userId, components: data.data || data.components || components, employeeName: data.employeeName };
   } catch {
     return rejectWithValue('Network error.');
   }
@@ -888,11 +954,16 @@ const payrollSlice = createSlice({
     });
     builder.addCase(updatePayStructure.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
+    // ── All Employees ─────────────────────────────────────────────
+    builder.addCase(fetchAllEmployees.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchAllEmployees.fulfilled, (s, a) => { s.loading = false; s.allEmployees = a.payload; });
+    builder.addCase(fetchAllEmployees.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
     // ── Employee Overrides ───────────────────────────────────────
     builder.addCase(fetchEmployeeOverrides.pending, (s) => { s.loading = true; s.error = null; });
     builder.addCase(fetchEmployeeOverrides.fulfilled, (s, a) => {
       s.loading = false;
-      s.employeeOverrides[a.payload.userId] = a.payload.components;
+      s.employeeOverrides[a.payload.userId] = a.payload as EmployeePayrollOverride;
       if (a.payload.employeeName) s.overrideEmployeeName[a.payload.userId] = a.payload.employeeName;
     });
     builder.addCase(fetchEmployeeOverrides.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
@@ -900,7 +971,7 @@ const payrollSlice = createSlice({
     builder.addCase(saveEmployeeOverrides.pending, (s) => { s.loading = true; s.error = null; });
     builder.addCase(saveEmployeeOverrides.fulfilled, (s, a) => {
       s.loading = false;
-      s.employeeOverrides[a.payload.userId] = a.payload.components;
+      s.employeeOverrides[a.payload.userId] = a.payload;
       s.successMessage = 'Employee overrides saved successfully';
     });
     builder.addCase(saveEmployeeOverrides.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
@@ -990,7 +1061,30 @@ const payrollSlice = createSlice({
 
     // ── Fetch All / Detail ───────────────────────────────────────
     builder.addCase(fetchAllPayrolls.pending, (s) => { s.loading = true; s.error = null; });
-    builder.addCase(fetchAllPayrolls.fulfilled, (s, a) => { s.loading = false; s.payrollRecords = a.payload; });
+    builder.addCase(fetchAllPayrolls.fulfilled, (s, a) => {
+      s.loading = false;
+      if (!a.payload || a.payload.length === 0) return;
+      // Deep-merge: for records we already have (enriched from generatePayroll), preserve nested fields
+      const incoming = a.payload;
+      const merged = incoming.map((incomingRec) => {
+        const existing = s.payrollRecords.find((r) => r.id === incomingRec.id);
+        if (existing) {
+          // Preserve nested enriched fields from generatePayroll response (user, payStructure, items, etc.)
+          return {
+            ...incomingRec,
+            items: existing.items ?? incomingRec.items,
+            user: existing.user ?? incomingRec.user,
+            payStructure: existing.payStructure ?? incomingRec.payStructure,
+            daysSummary: existing.daysSummary ?? incomingRec.daysSummary,
+          };
+        }
+        return incomingRec;
+      });
+      // Add records not in the listing response (generated but not yet in listing)
+      const listingIds = new Set(incoming.map((p) => p.id));
+      const enrichedOnly = s.payrollRecords.filter((r) => !listingIds.has(r.id));
+      s.payrollRecords = [...merged, ...enrichedOnly];
+    });
     builder.addCase(fetchAllPayrolls.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
     builder.addCase(fetchPayrollDetail.pending, (s) => { s.loading = true; s.error = null; });

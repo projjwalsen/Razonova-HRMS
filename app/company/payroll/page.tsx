@@ -51,10 +51,11 @@ import {
   PayStructureValueType,
   PayrollComponentType,
   GeneratePayrollPayload,
+  fetchAllEmployees,
+  EmployeeInfo,
 } from '@/store/actions/payrollActions';
 import { fetchDepartments } from '@/store/actions/departmentActions';
 import { fetchDesignations } from '@/store/actions/designationActions';
-import { fetchUserSelectOptions, UserSelectOption } from '@/store/actions/leaveActions';
 
 type AdminTab = 'dashboard' | 'components' | 'structures' | 'overrides' | 'generate' | 'listing';
 
@@ -179,6 +180,13 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle?: 
 // ─────────────────────────────────────────────
 // COMPONENT MASTER MODAL
 // ─────────────────────────────────────────────
+const VALUE_TYPE_LABELS: Record<PayStructureValueType, string> = {
+  PERCENTAGE_OF_BASIC: '% of Basic',
+  COMPANY_FIXED: 'Company Fixed',
+  EMPLOYEE_FIXED: 'Employee Fixed',
+  CUSTOM: 'Custom',
+};
+
 const ComponentMasterModal = ({
   open,
   editing,
@@ -190,12 +198,18 @@ const ComponentMasterModal = ({
   onClose: () => void; onSave: (p: CreateComponentMasterPayload) => void; loading: boolean;
 }) => {
   const [form, setForm] = useState<CreateComponentMasterPayload>({
-    name: '', type: 'EARNING', valueType: 'FLAT', isTaxable: false, isOptional: false, isActive: true,
+    name: '', type: 'EARNING', valueType: 'PERCENTAGE_OF_BASIC', isTaxable: false, isOptional: false, isActive: true,
   });
-  useEffect(() => { setForm(editing ? { name: editing.name, type: editing.type, valueType: editing.valueType, isTaxable: editing.isTaxable, isOptional: editing.isOptional, isActive: editing.isActive } : { name: '', type: 'EARNING', valueType: 'FLAT', isTaxable: false, isOptional: false, isActive: true }); }, [editing, open]);
+  useEffect(() => {
+    setForm(editing ? {
+      name: editing.name, type: editing.type, valueType: editing.valueType,
+      isTaxable: editing.isTaxable, isOptional: editing.isOptional, isActive: editing.isActive,
+      defaultValue: editing.defaultValue,
+    } : { name: '', type: 'EARNING', valueType: 'PERCENTAGE_OF_BASIC', isTaxable: false, isOptional: false, isActive: true });
+  }, [editing, open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-bold">{editing ? 'Edit Component Master' : 'Add Component Master'}</h2>
@@ -221,11 +235,27 @@ const ComponentMasterModal = ({
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Value Type *</label>
               <select value={form.valueType} onChange={(e) => setForm({ ...form, valueType: e.target.value as PayStructureValueType })}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
-                <option value="FLAT">Fixed Amount</option>
-                <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
+                {(Object.keys(VALUE_TYPE_LABELS) as PayStructureValueType[]).map(vt => (
+                  <option key={vt} value={vt}>{VALUE_TYPE_LABELS[vt]}</option>
+                ))}
               </select>
             </div>
           </div>
+
+          {/* Default Value — shown only when COMPANY_FIXED is selected */}
+          {form.valueType === 'COMPANY_FIXED' && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Amount*</label>
+              <input
+                type="number"
+                value={form.defaultValue ?? ''}
+                onChange={(e) => setForm({ ...form, defaultValue: parseFloat(e.target.value) || 0 })}
+                placeholder="Enter the amount"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]"
+              />
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-6">
             {(['isTaxable', 'isOptional', 'isActive'] as const).map((field) => (
               <label key={field} className="flex items-center gap-2 cursor-pointer">
@@ -238,7 +268,7 @@ const ComponentMasterModal = ({
         </div>
         <div className="flex gap-3 px-6 pb-6">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-          <button onClick={() => onSave(form)} disabled={loading || !form.name.trim()}
+          <button onClick={() => onSave(form)} disabled={loading || !form.name.trim() || (form.valueType === 'COMPANY_FIXED' && !form.defaultValue)}
             className="flex-1 px-4 py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
             {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
             {editing ? 'Update' : 'Create'}
@@ -253,10 +283,10 @@ const ComponentMasterModal = ({
 // PAY STRUCTURE MODAL
 // ─────────────────────────────────────────────
 const PayStructureModal = ({
-  open, editing, departments, designations, components,
+  open, editing, departments, components,
   onClose, onSave, loading,
 }: {
-  open: boolean; editing: PayStructure | null; departments: any[]; designations: any[];
+  open: boolean; editing: PayStructure | null; departments: any[];
   components: PayrollComponentMaster[]; onClose: () => void;
   onSave: (p: CreatePayStructurePayload) => void; loading: boolean;
 }) => {
@@ -265,7 +295,6 @@ const PayStructureModal = ({
       return {
         name: editing.name,
         departmentId: editing.departmentId,
-        designationId: editing.designationId,
         isDefault: editing.isDefault,
         isActive: editing.isActive,
         components: editing.components.map(c => ({
@@ -286,7 +315,6 @@ const PayStructureModal = ({
       setForm({
         name: editing.name,
         departmentId: editing.departmentId,
-        designationId: editing.designationId,
         isDefault: editing.isDefault,
         isActive: editing.isActive,
         components: editing.components.map(c => ({
@@ -302,11 +330,6 @@ const PayStructureModal = ({
       setForm({ name: '', isDefault: false, isActive: true, components: [] });
     }
   }, [editing, open]);
-
-  const addComponent = () => {
-    if (components.length === 0) return;
-    setForm({ ...form, components: [...form.components, { payrollComponentMasterId: components[0].id!, valueType: 'FLAT', value: 0, isActive: true }] });
-  };
 
   const removeComponent = (i: number) => setForm({ ...form, components: form.components.filter((_, idx) => idx !== i) });
 
@@ -337,15 +360,7 @@ const PayStructureModal = ({
               <select value={form.departmentId || ''} onChange={(e) => setForm({ ...form, departmentId: e.target.value || undefined })}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
                 <option value="">All Departments</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Designation</label>
-              <select value={form.designationId || ''} onChange={(e) => setForm({ ...form, designationId: e.target.value || undefined })}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
-                <option value="">All Designations</option>
-                {designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-6 pt-6">
@@ -361,44 +376,103 @@ const PayStructureModal = ({
 
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold text-gray-700">Components</h4>
-              <button type="button" onClick={addComponent} disabled={components.length === 0}
-                className="px-3 py-1.5 bg-[#0445AD] text-white rounded-lg text-xs font-semibold hover:bg-[#033080] disabled:opacity-50 flex items-center gap-1">
-                <Plus className="w-3.5 h-3.5" /> Add
-              </button>
+              <h4 className="text-sm font-semibold text-gray-700">Select Components</h4>
+              <span className="text-xs text-gray-400">{form.components.length} / {components.length} selected</span>
             </div>
-            {form.components.length === 0 && (
-              <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400">
-                No components added. Click "Add" to include salary components.
+
+            {/* Component Master chips — click to add */}
+            {components.length === 0 ? (
+              <div className="text-center py-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400">
+                No component masters available. Create them first.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {components.map(cm => {
+                  const isSelected = form.components.some(c => c.payrollComponentMasterId === cm.id);
+                  const isCompanyFixed = cm.valueType === 'COMPANY_FIXED';
+                  const hasDefault = cm.defaultValue != null;
+                  return (
+                    <button
+                      key={cm.id}
+                      type="button"
+                      onClick={() => {
+                        if (!isSelected) {
+                          setForm({
+                            ...form,
+                            components: [...form.components, {
+                              payrollComponentMasterId: cm.id!,
+                              valueType: cm.valueType,
+                              value: hasDefault ? cm.defaultValue! : 0,
+                              isActive: true,
+                            }],
+                          });
+                        }
+                      }}
+                      disabled={isSelected}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                        isSelected
+                          ? 'bg-[#0445AD]/10 text-[#0445AD] opacity-60 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-700 hover:bg-[#0445AD]/10 hover:text-[#0445AD]'
+                      }`}
+                    >
+                      {isSelected ? <Check className="w-3.5 h-3.5 text-[#0445AD]" /> : <Plus className="w-3.5 h-3.5" />}
+                      {cm.name}
+                      {isCompanyFixed && hasDefault && (
+                        <span className="text-[10px] bg-blue-100 text-blue-600 px-1 py-0.5 rounded">uses default</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
-            {form.components.map((c, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2 mb-2 p-3 bg-gray-50 rounded-xl">
-                <select value={c.payrollComponentMasterId} onChange={(e) => updateComponent(i, 'payrollComponentMasterId', e.target.value)}
-                  className="col-span-5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
-                  <option value="">Select component</option>
-                  {components.map(cm => <option key={cm.id} value={cm.id}>{cm.name} ({cm.type})</option>)}
-                </select>
-                <select value={c.valueType} onChange={(e) => updateComponent(i, 'valueType', e.target.value)}
-                  className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
-                  <option value="FLAT">Fixed</option>
-                  <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
-                </select>
-                <input type="number" value={c.value} onChange={(e) => updateComponent(i, 'value', parseFloat(e.target.value) || 0)}
-                  placeholder="Value"
-                  className="col-span-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
-                <label className="col-span-1 flex items-center justify-center cursor-pointer">
-                  <input type="checkbox" checked={c.isActive} onChange={(e) => updateComponent(i, 'isActive', e.target.checked)}
-                    className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
-                </label>
-                <button type="button" onClick={() => removeComponent(i)} className="col-span-1 p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+
+            {/* Selected components with value inputs */}
             {form.components.length > 0 && (
-              <div className="mt-1 text-xs text-gray-400">
-                Order: component, value type, value, active toggle, remove
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase">Set Values</p>
+                {form.components.map((c, i) => {
+                  const cm = components.find(m => m.id === c.payrollComponentMasterId);
+                  const isCompanyFixed = (cm?.valueType || c.valueType) === 'COMPANY_FIXED';
+                  const hasDefault = cm?.defaultValue != null;
+                  return (
+                    <div key={i} className="grid grid-cols-12 gap-2 items-center p-3 bg-gray-50 rounded-xl">
+                      <div className="col-span-5">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{cm?.name || '—'}</p>
+                        <p className="text-[10px] text-gray-400">{VALUE_TYPE_LABELS[(cm?.valueType || c.valueType) as PayStructureValueType] || c.valueType}</p>
+                      </div>
+                      {!isCompanyFixed || !hasDefault ? (
+                        <input
+                          type="number"
+                          value={c.value ?? ''}
+                          onChange={(e) => updateComponent(i, 'value', parseFloat(e.target.value) || 0)}
+                          placeholder={isCompanyFixed ? 'Set amount' : 'Amount / %'}
+                          className="col-span-4 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]"
+                        />
+                      ) : (
+                        <div className="col-span-4 flex items-center gap-1 px-2">
+                          <span className="text-xs text-blue-600 font-semibold">₹{cm.defaultValue!.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] text-gray-400">(default)</span>
+                        </div>
+                      )}
+                      <label className="col-span-1 flex items-center justify-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={c.isActive}
+                          onChange={(e) => updateComponent(i, 'isActive', e.target.checked)}
+                          className="w-4 h-4 text-[#0445AD] border-gray-300 rounded"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeComponent(i)}
+                        className="col-span-1 p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 flex items-center justify-center"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <p className="col-span-1 text-[10px] text-gray-400 text-center">Active</p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -603,17 +677,13 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
   const [leaveEnabled, setLeaveEnabled] = useState(false);
-  const [leaveCount, setLeaveCount] = useState(0);
-  const [leaveAmount, setLeaveAmount] = useState(0);
   const [attEnabled, setAttEnabled] = useState(false);
-  const [attCount, setAttCount] = useState(0);
-  const [attAmount, setAttAmount] = useState(0);
 
   const handleGenerate = () => {
     onGenerate({
       month, year,
-      leaveDeduction: leaveEnabled ? { enabled: true, manualLeaveCount: leaveCount, manualAmountDeducted: leaveAmount } : undefined,
-      attendanceDeduction: attEnabled ? { enabled: true, manualAbsentCount: attCount, manualAmountDeducted: attAmount } : undefined,
+      leaveDeduction: leaveEnabled ? { enabled: true } : undefined,
+      attendanceDeduction: attEnabled ? { enabled: true } : undefined,
     });
   };
 
@@ -634,7 +704,7 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Month *</label>
               <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
-                {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                {MONTHS.filter(m => m.value < now.getMonth() + 1).map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
             <div>
@@ -653,20 +723,6 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
                 className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
               <span className="text-sm font-semibold text-gray-700">Leave Deduction</span>
             </div>
-            {leaveEnabled && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Manual Leave Count</label>
-                  <input type="number" value={leaveCount || ''} onChange={(e) => setLeaveCount(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
-                  <input type="number" value={leaveAmount || ''} onChange={(e) => setLeaveAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
-                </div>
-              </div>
-            )}
           </div>
           <div className="p-4 bg-gray-50 rounded-xl space-y-3">
             <div className="flex items-center gap-2">
@@ -674,20 +730,6 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
                 className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
               <span className="text-sm font-semibold text-gray-700">Attendance Deduction</span>
             </div>
-            {attEnabled && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Manual Absent Count</label>
-                  <input type="number" value={attCount || ''} onChange={(e) => setAttCount(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Amount (₹)</label>
-                  <input type="number" value={attAmount || ''} onChange={(e) => setAttAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]" />
-                </div>
-              </div>
-            )}
           </div>
         </div>
         <div className="flex gap-3 px-6 pb-6">
@@ -902,7 +944,7 @@ export default function PayrollPage() {
   const dispatch = useAppDispatch();
   const {
     dashboardKPIs, componentMasters, payStructures, employeeOverrides,
-    payrollRecords,
+    payrollRecords, allEmployees,
     loading, processing, generating, error, successMessage,
   } = useAppSelector(s => s.payroll);
   const { departments } = useAppSelector(s => s.departments);
@@ -927,10 +969,9 @@ export default function PayrollPage() {
   const [processRecord, setProcessRecord] = useState<PayrollRecord | null>(null);
   const [adjustRecord, setAdjustRecord] = useState<PayrollRecord | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string; variant: 'danger' | 'primary' } | null>(null);
-  const [overrideUser, setOverrideUser] = useState<UserSelectOption | null>(null);
+  const [overrideUser, setOverrideUser] = useState<EmployeeInfo | null>(null);
   const [overrideComponents, setOverrideComponents] = useState<EmployeePayrollComponent[]>([]);
   const [overrideSearch, setOverrideSearch] = useState('');
-  const [userOptions, setUserOptions] = useState<UserSelectOption[]>([]);
   const [localMsg, setLocalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -951,14 +992,12 @@ export default function PayrollPage() {
     if (localMsg) { const t = setTimeout(() => setLocalMsg(null), 4000); return () => clearTimeout(t); }
   }, [localMsg]);
 
-  // Load user options when overrides tab is opened
+  // Load employees when overrides tab is opened
   useEffect(() => {
-    if (activeTab === 'overrides') {
-      dispatch(fetchUserSelectOptions()).then((r: any) => {
-        if (fetchUserSelectOptions.fulfilled.match(r)) setUserOptions(r.payload || []);
-      });
+    if (activeTab === 'overrides' && allEmployees.length === 0) {
+      dispatch(fetchAllEmployees());
     }
-  }, [activeTab, dispatch]);
+  }, [activeTab, dispatch, allEmployees.length]);
 
   const kpis = dashboardKPIs;
   const filteredRecords = payrollRecords.filter(r => {
@@ -1003,6 +1042,9 @@ export default function PayrollPage() {
     const result = await dispatch(generatePayroll(payload));
     if (generatePayroll.fulfilled.match(result)) {
       setShowGenerateModal(false);
+      setListMonth(payload.month);
+      setListYear(payload.year);
+      setListStatus('');
       dispatch(fetchDashboardKPIs({ month: payload.month, year: payload.year }));
       dispatch(fetchAllPayrolls({ month: payload.month, year: payload.year }));
       setActiveTab('listing');
@@ -1050,20 +1092,13 @@ export default function PayrollPage() {
   };
 
   // Employee Overrides
-  const handleSelectOverrideUser = async (user: UserSelectOption) => {
+  const handleSelectOverrideUser = async (user: EmployeeInfo) => {
     setOverrideUser(user);
     const result = await dispatch(fetchEmployeeOverrides(user.id));
     if (fetchEmployeeOverrides.fulfilled.match(result)) {
-      setOverrideComponents((result as any).payload.components || []);
+      const components = result.payload?.components;
+      setOverrideComponents(Array.isArray(components) ? components : []);
     }
-  };
-
-  const handleAddOverride = () => {
-    if (componentMasters.length === 0) return;
-    setOverrideComponents([...overrideComponents, {
-      payrollComponentMasterId: componentMasters[0].id!,
-      valueType: 'FLAT', value: 0, isActive: true, remarks: '',
-    }]);
   };
 
   const handleSaveOverrides = async () => {
@@ -1071,7 +1106,7 @@ export default function PayrollPage() {
     await dispatch(saveEmployeeOverrides({ userId: overrideUser.id, components: overrideComponents }));
   };
 
-  const overrideFilteredUsers = userOptions.filter(u =>
+  const overrideFilteredEmployees = allEmployees.filter(u =>
     (u.name || u.email || '').toLowerCase().includes(overrideSearch.toLowerCase())
   );
 
@@ -1177,10 +1212,10 @@ export default function PayrollPage() {
                       <p className="text-sm font-semibold text-gray-800 truncate">{r.user?.name || r.employeeName}</p>
                       <p className="text-xs text-gray-400">{formatMonth(r.month, r.year)}</p>
                     </div>
-                    <div className="text-right hidden sm:block">
+                    {/* <div className="text-right hidden sm:block">
                       <p className="text-sm font-bold text-gray-800">₹{fmt(r.netSalary)}</p>
                       <p className="text-xs text-gray-400">net salary</p>
-                    </div>
+                    </div> */}
                     <StatusBadge status={r.status} />
                   </div>
                 ))}
@@ -1229,7 +1264,10 @@ export default function PayrollPage() {
                   <h3 className="text-sm font-bold text-gray-800 mb-1">{c.name}</h3>
                   <div className="flex flex-wrap gap-2 mt-2">
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{c.type}</span>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{c.valueType === 'PERCENTAGE_OF_BASIC' ? '% of Basic' : 'Fixed'}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{VALUE_TYPE_LABELS[c.valueType] || c.valueType}</span>
+                    {c.defaultValue != null && (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">Default: ₹{c.defaultValue.toLocaleString('en-IN')}</span>
+                    )}
                     {c.isTaxable && <span className="px-2 py-0.5 bg-orange-50 text-orange-600 rounded text-xs">Taxable</span>}
                     {c.isOptional && <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded text-xs">Optional</span>}
                   </div>
@@ -1307,95 +1345,208 @@ export default function PayrollPage() {
             title="Employee Payroll Overrides"
             subtitle="Set employee-specific salary component values that override the default pay structure"
           />
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input value={overrideSearch} onChange={(e) => setOverrideSearch(e.target.value)} placeholder="Search employee..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" />
-              </div>
-            </div>
-            {!overrideUser ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-                {overrideFilteredUsers.slice(0, 20).map(u => (
-                  <button key={u.id} onClick={() => handleSelectOverrideUser(u)}
-                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl hover:border-[#0445AD] hover:bg-blue-50/30 transition text-left">
-                    <div className="w-8 h-8 bg-[#0445AD]/10 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
-                      {(u.name || 'U').charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{u.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{u.email}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <div className="flex items-center gap-3 p-3 bg-[#0445AD]/5 border border-[#0445AD]/20 rounded-xl mb-4">
-                  <div className="w-8 h-8 bg-[#0445AD]/20 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
-                    {(overrideUser.name || 'U').charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-800">{overrideUser.name}</p>
-                    <p className="text-xs text-gray-400">{overrideUser.email}</p>
-                  </div>
-                  <button onClick={() => { setOverrideUser(null); setOverrideComponents([]); setOverrideSearch(''); }}
-                    className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
+
+          {overrideUser ? (
+            /* Override Panel — shown when an employee is selected */
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              {/* Selected employee header */}
+              <div className="flex items-center gap-3 p-3 bg-[#0445AD]/5 border border-[#0445AD]/20 rounded-xl mb-4">
+                <div className="w-10 h-10 bg-[#0445AD]/20 rounded-full flex items-center justify-center text-sm font-bold text-[#0445AD]">
+                  {(overrideUser.name || 'U').charAt(0)}
                 </div>
-                {overrideComponents.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">No overrides set. This employee uses the default structure.</p>
-                )}
-                <div className="space-y-2 mb-4">
-                  {overrideComponents.map((c, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-xl items-center">
-                      <select value={c.payrollComponentMasterId} onChange={(e) => {
-                        const updated = [...overrideComponents];
-                        updated[i] = { ...updated[i], payrollComponentMasterId: e.target.value };
-                        setOverrideComponents(updated);
-                      }}
-                        className="col-span-5 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
-                          <option value="">Select component</option>
-                          {componentMasters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                        </select>
-                        <select value={c.valueType} onChange={(e) => {
-                          const updated = [...overrideComponents]; updated[i] = { ...updated[i], valueType: e.target.value as PayStructureValueType };
-                          setOverrideComponents(updated);
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-800">{overrideUser.name}</p>
+                  <p className="text-xs text-gray-400">{overrideUser.email}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.employeeProfile?.employeeCode || '—'}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.department?.name || '—'}</span>
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.designation?.name || '—'}</span>
+                  </div>
+                </div>
+                <button onClick={() => { setOverrideUser(null); setOverrideComponents([]); setOverrideSearch(''); }}
+                  className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
+              </div>
+
+              {/* Component chips — click to add */}
+              {componentMasters.length === 0 ? (
+                <div className="text-center py-4 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 mb-4">
+                  No component masters available. Create them first.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {componentMasters.map(cm => {
+                    const isAdded = overrideComponents.some(c => (c.payrollMasterComponentId || c.payrollComponentMasterId) === cm.id);
+                    const isCompanyFixed = cm.valueType === 'COMPANY_FIXED';
+                    const hasDefault = cm.defaultValue != null;
+                    return (
+                      <button
+                        key={cm.id}
+                        type="button"
+                        onClick={() => {
+                          if (!isAdded) {
+                            setOverrideComponents([...overrideComponents, {
+                              payrollMasterComponentId: cm.id!,
+                              payrollMasterComponent: cm,
+                              valueType: cm.valueType,
+                              value: hasDefault ? cm.defaultValue! : 0,
+                              isActive: true,
+                              remarks: '',
+                            }]);
+                          }
                         }}
-                          className="col-span-3 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]">
-                          <option value="FLAT">Fixed</option>
-                          <option value="PERCENTAGE_OF_BASIC">% of Basic</option>
-                        </select>
-                        <input type="number" value={c.value || ''} onChange={(e) => {
-                          const updated = [...overrideComponents]; updated[i] = { ...updated[i], value: parseFloat(e.target.value) || 0 };
-                          setOverrideComponents(updated);
-                        }}
-                          className="col-span-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]" />
+                        disabled={isAdded}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                          isAdded
+                            ? 'bg-[#0445AD]/10 text-[#0445AD] opacity-60 cursor-not-allowed'
+                            : 'bg-gray-100 text-gray-700 hover:bg-[#0445AD]/10 hover:text-[#0445AD]'
+                        }`}
+                      >
+                        {isAdded ? <Check className="w-3.5 h-3.5 text-[#0445AD]" /> : <Plus className="w-3.5 h-3.5" />}
+                        {cm.name}
+                        {isCompanyFixed && hasDefault && (
+                          <span className="text-[10px] bg-blue-100 text-blue-600 px-1 py-0.5 rounded">uses default</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Selected overrides — set values */}
+              {overrideComponents.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Override Values</p>
+                  {overrideComponents.map((c, i) => {
+                    const cm = componentMasters.find(m => m.id === (c.payrollMasterComponentId || c.payrollComponentMasterId));
+                    const componentValueType = cm?.valueType || c.valueType;
+                    const isCompanyFixed = componentValueType === 'COMPANY_FIXED';
+                    const hasDefault = cm?.defaultValue != null;
+                    const isEditable = !isCompanyFixed || !hasDefault;
+                    return (
+                      <div key={i} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-xl items-center">
+                        <div className="col-span-4">
+                          <p className="text-xs font-semibold text-gray-800 truncate">{cm?.name || '—'}</p>
+                          <p className="text-[10px] text-gray-400">{VALUE_TYPE_LABELS[componentValueType as PayStructureValueType] || componentValueType}</p>
+                        </div>
+                        {isEditable ? (
+                          <input
+                            type="number"
+                            value={c.value ?? ''}
+                            onChange={(e) => {
+                              const updated = [...overrideComponents];
+                              updated[i] = { ...updated[i], value: parseFloat(e.target.value) || 0 };
+                              setOverrideComponents(updated);
+                            }}
+                            placeholder={isCompanyFixed ? 'Set amount' : 'Amount / %'}
+                            className="col-span-4 px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-[#0445AD]"
+                          />
+                        ) : (
+                          <div className="col-span-4 flex items-center gap-1 px-2">
+                            <span className="text-xs text-blue-600 font-semibold">₹{cm.defaultValue!.toLocaleString('en-IN')}</span>
+                            <span className="text-[10px] text-gray-400">(default)</span>
+                          </div>
+                        )}
                         <label className="col-span-1 flex items-center justify-center cursor-pointer">
-                          <input type="checkbox" checked={c.isActive} onChange={(e) => {
-                            const updated = [...overrideComponents]; updated[i] = { ...updated[i], isActive: e.target.checked };
-                            setOverrideComponents(updated);
-                          }}
-                            className="w-4 h-4 text-[#0445AD] border-gray-300 rounded" />
+                          <input
+                            type="checkbox"
+                            checked={c.isActive}
+                            onChange={(e) => {
+                              const updated = [...overrideComponents];
+                              updated[i] = { ...updated[i], isActive: e.target.checked };
+                              setOverrideComponents(updated);
+                            }}
+                            className="w-4 h-4 text-[#0445AD] border-gray-300 rounded"
+                          />
                         </label>
                         <button onClick={() => setOverrideComponents(overrideComponents.filter((_, idx) => idx !== i))}
-                          className="col-span-1 p-1.5 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                          className="col-span-1 p-1.5 text-red-400 hover:text-red-600 flex items-center justify-center">
+                          <X className="w-4 h-4" />
+                        </button>
+                        <p className="col-span-1 text-[10px] text-gray-400 text-center">Active</p>
                       </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={handleAddOverride}
-                    className="px-4 py-2 border border-dashed border-gray-300 text-gray-500 rounded-xl text-sm font-medium hover:border-[#0445AD] hover:text-[#0445AD] flex items-center gap-1">
-                    <Plus className="w-4 h-4" /> Add Override
-                  </button>
-                  <button onClick={handleSaveOverrides} disabled={loading}
-                    className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold hover:bg-[#033080] disabled:opacity-50 flex items-center gap-2">
-                    {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Save Overrides
-                  </button>
+              )}
+
+              <div className="flex gap-3 mt-4">
+                <button onClick={handleSaveOverrides} disabled={loading}
+                  className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold hover:bg-[#033080] disabled:opacity-50 flex items-center gap-2">
+                  {loading && <RefreshCw className="w-4 h-4 animate-spin" />}Save Overrides
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Employee Table — shown when no employee is selected */
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="p-4 border-b border-gray-100">
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input value={overrideSearch} onChange={(e) => setOverrideSearch(e.target.value)}
+                    placeholder="Search by name, email, code..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]" />
                 </div>
               </div>
-            )}
-          </div>
+
+              {loading && allEmployees.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400">Loading employees...</div>
+              ) : overrideFilteredEmployees.length === 0 ? (
+                <div className="p-8 text-center text-sm text-gray-400">No employees found</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        {['Employee', 'Code', 'Department', 'Designation', 'Salary', 'Bank', 'Action'].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {overrideFilteredEmployees.map(u => (
+                        <tr key={u.id} className="hover:bg-gray-50/50 transition">
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-[#0445AD]/10 rounded-full flex items-center justify-center text-xs font-bold text-[#0445AD]">
+                                {(u.name || 'U').charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800">{u.name || '—'}</p>
+                                <p className="text-xs text-gray-400">{u.email || '—'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-mono">
+                              {u.employeeProfile?.employeeCode || '—'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">{u.department?.name || '—'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">{u.designation?.name || '—'}</td>
+                          <td className="px-4 py-3.5 text-sm font-semibold text-gray-800">
+                            {u.employeeProfile?.salary ? `₹${u.employeeProfile.salary.toLocaleString('en-IN')}` : '—'}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {u.bankAccount?.isVerified ? (
+                              <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded text-xs">Verified</span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded text-xs">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <button onClick={() => handleSelectOverrideUser(u)}
+                              className="px-3 py-1.5 bg-[#0445AD]/10 text-[#0445AD] rounded-lg text-xs font-semibold hover:bg-[#0445AD]/20 transition flex items-center gap-1">
+                              <Settings className="w-3.5 h-3.5" /> Override
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1444,7 +1595,7 @@ export default function PayrollPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead><tr className="bg-gray-50 border-b border-gray-200">
-                    {['Employee', 'Month', 'Gross', 'Deductions', 'Net Salary', 'Status', 'Actions'].map(h => (
+                    {['Employee', 'Pay Structure', 'Month', 'Base Salary', 'Items', 'Net Salary', 'Status', 'Actions'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                     ))}
                   </tr></thead>
@@ -1457,18 +1608,36 @@ export default function PayrollPage() {
                               {(r.user?.name || r.employeeName || 'U').charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-semibold text-gray-800">{r.user?.name || r.employeeName}</p>
-                              <p className="text-xs text-gray-400">{r.user?.employeeCode || r.employeeEmail || ''}</p>
+                              <p className="text-sm font-semibold text-gray-800">{r.user?.name || r.employeeName || '—'}</p>
+                              <p className="text-xs text-gray-400">{r.user?.email || r.employeeEmail || ''}</p>
                             </div>
                           </div>
                         </td>
+                        <td className="px-4 py-3.5">
+                          <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{r.payStructure?.name || '—'}</span>
+                        </td>
                         <td className="px-4 py-3.5 text-sm text-gray-600 whitespace-nowrap">{formatMonth(r.month, r.year)}</td>
-                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800">₹{fmt(r.grossSalary)}</td>
-                        <td className="px-4 py-3.5 text-sm text-red-600">₹{fmt(r.totalDeductions)}</td>
+                        <td className="px-4 py-3.5 text-sm font-semibold text-gray-800">₹{fmt(r.baseSalary)}</td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex flex-col gap-0.5">
+                            {r.items?.slice(0, 2).map(item => (
+                              <div key={item.id} className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${item.type === 'EARNING' || item.type === 'ALLOWANCE' ? 'bg-green-400' : item.type === 'DEDUCTION' || item.type === 'TAX' ? 'bg-red-400' : 'bg-purple-400'}`} />
+                                <span className="text-xs text-gray-600 truncate max-w-[100px]">{item.label}</span>
+                                <span className={`text-xs font-semibold ${item.type === 'DEDUCTION' || item.type === 'TAX' ? 'text-red-500' : 'text-green-600'}`}>
+                                  {item.type === 'DEDUCTION' || item.type === 'TAX' ? '-' : '+'}₹{fmt(item.amount)}
+                                </span>
+                              </div>
+                            ))}
+                            {(r.items?.length ?? 0) > 2 && (
+                              <span className="text-[10px] text-gray-400">+{(r.items?.length ?? 0) - 2} more</span>
+                            )}
+                            {(r.items?.length ?? 0) === 0 && <span className="text-xs text-gray-400">—</span>}
+                          </div>
+                        </td>
                         <td className="px-4 py-3.5 text-sm font-bold text-green-700">₹{fmt(r.netSalary)}</td>
                         <td className="px-4 py-3.5"><StatusBadge status={r.status} /></td>
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
+                        <td className="px-4 py-3.5 flex gap-1">
                             <button onClick={() => handleViewDetail(r)}
                               className="p-1.5 text-gray-400 hover:text-[#0445AD] border border-gray-200 rounded-lg hover:bg-blue-50" title="View">
                               <Eye className="w-4 h-4" />
@@ -1499,7 +1668,6 @@ export default function PayrollPage() {
                                 <XCircle className="w-4 h-4" />
                               </button>
                             )}
-                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1520,7 +1688,7 @@ export default function PayrollPage() {
 
       <PayStructureModal
         open={showStructureModal} editing={editingStructure}
-        departments={departments} designations={designations}
+        departments={departments}
         components={componentMasters}
         onClose={() => { setShowStructureModal(false); setEditingStructure(null); }}
         onSave={handleSaveStructure} loading={loading}
