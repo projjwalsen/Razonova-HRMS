@@ -26,6 +26,7 @@ import {
   Layers,
   Briefcase,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -43,6 +44,7 @@ import {
   fetchActiveHolidayCalendar,
   createHolidayCalendar,
   createHoliday,
+  deleteHoliday,
   setSelectedCalendar,
   addHolidayToCalendar,
   // Work Week
@@ -1780,6 +1782,7 @@ function HolidayCalendarsSection() {
             setHolidayForm((p) => ({ ...p, holidayCalendarId: selectedCalendar.id }));
             setShowHolidayModal(true);
           }}
+          onDeleteHoliday={(holidayId) => dispatch(deleteHoliday(holidayId))}
           submitting={submitting}
         />
       )}
@@ -1855,8 +1858,9 @@ function HolidayCalendarsSection() {
 }
 
 // ===== CALENDAR DETAIL DRAWER =====
-function CalendarDetailDrawer({ calendar, onClose, onAddHoliday, submitting }: {
-  calendar: HolidayCalendar; onClose: () => void; onAddHoliday: () => void; submitting: boolean;
+function CalendarDetailDrawer({ calendar, onClose, onAddHoliday, onDeleteHoliday, submitting }: {
+  calendar: HolidayCalendar; onClose: () => void; onAddHoliday: () => void;
+  onDeleteHoliday: (holidayId: string) => void; submitting: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -1892,6 +1896,14 @@ function CalendarDetailDrawer({ calendar, onClose, onAddHoliday, submitting }: {
                     <p className="text-xs text-gray-400">{formatDate(h.date)}</p>
                   </div>
                   {h.isOptional && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Optional</span>}
+                  <button
+                    onClick={() => onDeleteHoliday(h.id)}
+                    disabled={submitting}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+                    title="Delete holiday"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
             </div>

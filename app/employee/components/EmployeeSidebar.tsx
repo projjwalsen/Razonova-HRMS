@@ -24,7 +24,7 @@ const navItems = [
   { href: '/employee', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/employee/leave', label: 'My Leave', icon: CalendarCheck },
   { href: '/employee/attendance', label: 'My Attendance', icon: Clock },
-  { href: '#', label: 'Payroll', icon: DollarSign, disabled: true },
+  { href: '/employee/payroll', label: 'Payroll', icon: DollarSign },
   { href: '#', label: 'Documents', icon: FileText, disabled: true },
 ];
 
