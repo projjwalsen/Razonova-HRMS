@@ -652,6 +652,24 @@ export const createHoliday = createAsyncThunk<Holiday, Partial<Holiday>, { rejec
   }
 );
 
+// DELETE /leave/holiday/:holidayId — Delete a specific holiday
+export const deleteHoliday = createAsyncThunk<string, string, { rejectValue: string }>(
+  "leave/deleteHoliday",
+  async (holidayId, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/org/leave/holiday/${holidayId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to delete holiday");
+      return holidayId;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
 // =============================================
 // THUNKS - WORK WEEK
 // =============================================
@@ -982,6 +1000,24 @@ const leaveSlice = createSlice({
       s.successMessage = "Holiday added successfully";
     })
     builder.addCase(createHoliday.rejected, (s, a) => { s.submitting = false; s.error = a.payload as string; })
+
+    builder.addCase(deleteHoliday.pending, (s) => { s.submitting = true; s.error = null; })
+    builder.addCase(deleteHoliday.fulfilled, (s, a) => {
+      s.submitting = false;
+      s.successMessage = "Holiday deleted successfully";
+      // Remove holiday from all calendars
+      s.holidayCalendars.forEach((cal) => {
+        if (cal.holidays) cal.holidays = cal.holidays.filter((h) => h.id !== a.payload);
+      });
+      if (s.activeHolidayCalendar?.holidays) {
+        s.activeHolidayCalendar.holidays = s.activeHolidayCalendar.holidays.filter((h) => h.id !== a.payload);
+      }
+      // Remove from selectedCalendar if present
+      if (s.selectedCalendar?.holidays) {
+        s.selectedCalendar.holidays = s.selectedCalendar.holidays.filter((h) => h.id !== a.payload);
+      }
+    })
+    builder.addCase(deleteHoliday.rejected, (s, a) => { s.submitting = false; s.error = a.payload as string; })
 
     // ---- Work Week ----
     builder.addCase(fetchWorkWeek.pending, (s) => { s.loading = true; s.error = null; })

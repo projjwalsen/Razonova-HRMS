@@ -11,11 +11,14 @@ import {
   RefreshCw,
   Eye,
   Settings,
+  Download,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  fetchMyPayrolls,
+  fetchMyPayrollRecords,
   fetchMyPayrollDetail,
+  fetchPayslipPreview,
+  downloadPayslip,
   fetchEmployeePayrollComponents,
   clearMyPayslipDetail,
   clearPayrollError,
@@ -160,11 +163,16 @@ const PayStructureSection = ({
           </div>
 
           {/* Pay Structure Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: 'Pay Structure', value: components.payStructure?.name, color: 'text-gray-800' },
-              { label: 'Employee Code', value: components.employeeCode, color: 'text-gray-800' },
-              { label: 'Components', value: `${allComponents.length} items`, color: 'text-gray-500' },
+              { label: 'Pay Structure', value: components.payStructure?.name },
+              { label: 'Department', value: components.department },
+              { label: 'Designation', value: components.designation },
+              { label: 'Employee Code', value: components.employeeCode },
+              { label: 'Employment Type', value: components.employmentType },
+              { label: 'Joining Date', value: components.joiningDate ? new Date(components.joiningDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : undefined },
+              { label: 'Components', value: `${allComponents.length} items` },
+              { label: 'Status', value: components.payStructure?.isActive ? 'Active' : 'Inactive' },
             ].map(({ label, value }) => (
               <div key={label} className="p-3 bg-gray-50 rounded-xl">
                 <p className="text-xs text-gray-400">{label}</p>
@@ -389,6 +397,53 @@ const PayslipDrawer = ({ record, onClose }: { record: PayrollRecord | null; onCl
 };
 
 // ─────────────────────────────────────────────
+// PAYSLIP PREVIEW MODAL
+// ─────────────────────────────────────────────
+const PayslipPreviewModal = ({ open, previewUrl, previewLoading, record, onClose, onDownload }: {
+  open: boolean; previewUrl: string | null; previewLoading: boolean;
+  record: PayrollRecord | null; onClose: () => void; onDownload: () => void;
+}) => {
+  if (!open || !record) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Payslip Preview</h2>
+            <p className="text-xs text-gray-400">{formatMonth(record.month, record.year)}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onDownload}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 transition">
+              <Download className="w-3.5 h-3.5" />Download
+            </button>
+            <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto p-6">
+          {previewLoading ? (
+            <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
+              <RefreshCw className="w-5 h-5 animate-spin mr-2" />Loading preview...
+            </div>
+          ) : previewUrl ? (
+            <iframe src={previewUrl} className="w-full h-[70vh] border border-gray-200 rounded-xl" title="Payslip Preview" />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-sm">
+              <FileText className="w-10 h-10 mb-2 opacity-30" />
+              <p>Preview not available</p>
+              <p className="text-xs mt-1">The payslip preview could not be loaded.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────
 export default function EmployeePayrollPage() {
@@ -400,6 +455,9 @@ export default function EmployeePayrollPage() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [drawerRecord, setDrawerRecord] = useState<PayrollRecord | null>(null);
+  const [previewRecord, setPreviewRecord] = useState<PayrollRecord | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [localMsg, setLocalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -415,7 +473,7 @@ export default function EmployeePayrollPage() {
   }, []);
 
   useEffect(() => {
-    dispatch(fetchMyPayrolls());
+    dispatch(fetchMyPayrollRecords());
     if (currentUserId) {
       dispatch(fetchEmployeePayrollComponents(currentUserId));
     }
@@ -447,6 +505,16 @@ export default function EmployeePayrollPage() {
     } else {
       setDrawerRecord(record);
     }
+  };
+
+  const handlePreviewPayslip = async (record: PayrollRecord) => {
+    setPreviewLoading(true);
+    setPreviewRecord(record);
+    const result = await dispatch(fetchPayslipPreview(record.id));
+    if (fetchPayslipPreview.fulfilled.match(result)) {
+      setPreviewUrl(result.payload?.url || null);
+    }
+    setPreviewLoading(false);
   };
 
   const handleCloseDrawer = () => {
@@ -484,7 +552,7 @@ export default function EmployeePayrollPage() {
           className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0445AD]">
           {[now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1].map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
-        <button onClick={() => dispatch(fetchMyPayrolls())}
+        <button onClick={() => dispatch(fetchMyPayrollRecords())}
           className="ml-auto p-2.5 text-gray-500 hover:text-[#0445AD] border border-gray-200 rounded-xl hover:bg-blue-50" title="Refresh">
           <RefreshCw className="w-4 h-4" />
         </button>
@@ -546,10 +614,25 @@ export default function EmployeePayrollPage() {
                       <td className="px-4 py-3.5"><p className="text-sm font-bold text-green-700">₹{fmt(record.netSalary)}</p></td>
                       <td className="px-4 py-3.5"><StatusBadge status={record.status} /></td>
                       <td className="px-4 py-3.5">
-                        <button onClick={() => handleViewPayslip(record)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0445AD]/10 text-[#0445AD] rounded-lg text-xs font-semibold hover:bg-[#0445AD]/20 transition">
-                          <Eye className="w-3.5 h-3.5" />View
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => handleViewPayslip(record)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0445AD]/10 text-[#0445AD] rounded-lg text-xs font-semibold hover:bg-[#0445AD]/20 transition">
+                            <Eye className="w-3.5 h-3.5" />View
+                          </button>
+                          {record.status === 'PAID' || record.status === 'PROCESSED' ? (
+                            <button onClick={() => downloadPayslip(record.id)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-100 transition"
+                              title="Download Payslip">
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handlePreviewPayslip(record)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold hover:bg-gray-100 transition"
+                              title="Preview Payslip">
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -581,10 +664,25 @@ export default function EmployeePayrollPage() {
                       <td className="px-4 py-3.5 text-sm font-bold text-green-700">₹{fmt(record.netSalary)}</td>
                       <td className="px-4 py-3.5"><StatusBadge status={record.status} /></td>
                       <td className="px-4 py-3.5">
-                        <button onClick={() => handleViewPayslip(record)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0445AD]/10 text-[#0445AD] rounded-lg text-xs font-semibold hover:bg-[#0445AD]/20 transition">
-                          <Eye className="w-3.5 h-3.5" />View
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => handleViewPayslip(record)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#0445AD]/10 text-[#0445AD] rounded-lg text-xs font-semibold hover:bg-[#0445AD]/20 transition">
+                            <Eye className="w-3.5 h-3.5" />View
+                          </button>
+                          {record.status === 'PAID' || record.status === 'PROCESSED' ? (
+                            <button onClick={() => downloadPayslip(record.id)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-100 transition"
+                              title="Download Payslip">
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handlePreviewPayslip(record)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-semibold hover:bg-gray-100 transition"
+                              title="Preview Payslip">
+                              <FileText className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -594,6 +692,16 @@ export default function EmployeePayrollPage() {
           </div>
         </div>
       )}
+
+      {/* Payslip Preview Modal */}
+      <PayslipPreviewModal
+        open={!!previewRecord}
+        previewUrl={previewUrl}
+        previewLoading={previewLoading}
+        record={previewRecord}
+        onClose={() => { setPreviewRecord(null); setPreviewUrl(null); }}
+        onDownload={() => previewRecord && downloadPayslip(previewRecord.id)}
+      />
 
       <PayslipDrawer record={drawerRecord} onClose={handleCloseDrawer} />
     </div>

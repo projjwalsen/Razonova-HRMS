@@ -975,7 +975,7 @@ export default function PayrollPage() {
   const [localMsg, setLocalMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    dispatch(fetchDashboardKPIs({ month: now.getMonth() + 1, year: now.getFullYear() }));
+    dispatch(fetchDashboardKPIs({ month: now.getMonth(), year: now.getFullYear() }));
     dispatch(fetchComponentMasters());
     dispatch(fetchPayStructures());
     dispatch(fetchAllPayrolls({}));
@@ -1096,6 +1096,19 @@ export default function PayrollPage() {
     setOverrideUser(user);
     const result = await dispatch(fetchEmployeeOverrides(user.id));
     if (fetchEmployeeOverrides.fulfilled.match(result)) {
+      // Use the enriched user data from the API response (has department, designation, profile, salary)
+      const apiUser = result.payload?.user;
+      if (apiUser) {
+        setOverrideUser({
+          ...user,
+          name: apiUser.name ?? user.name,
+          email: apiUser.email ?? user.email,
+          department: apiUser.department ?? user.department,
+          designation: apiUser.designation ?? user.designation,
+          employeeProfile: apiUser.employeeProfile ?? user.employeeProfile,
+          baseSalary: apiUser.baseSalary,
+        });
+      }
       const components = result.payload?.components;
       setOverrideComponents(Array.isArray(components) ? components : []);
     }
@@ -1361,7 +1374,16 @@ export default function PayrollPage() {
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.employeeProfile?.employeeCode || '—'}</span>
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.department?.name || '—'}</span>
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">{overrideUser.designation?.name || '—'}</span>
+                    {overrideUser.employeeProfile?.employmentType && (
+                      <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded text-xs">{overrideUser.employeeProfile?.employmentType}</span>
+                    )}
+                    {overrideUser.baseSalary != null && (
+                      <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded text-xs">₹{overrideUser.baseSalary.toLocaleString('en-IN')}/mo</span>
+                    )}
                   </div>
+                  {overrideUser.employeeProfile?.joiningDate && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">Joined: {new Date(overrideUser.employeeProfile.joiningDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  )}
                 </div>
                 <button onClick={() => { setOverrideUser(null); setOverrideComponents([]); setOverrideSearch(''); }}
                   className="p-1.5 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>

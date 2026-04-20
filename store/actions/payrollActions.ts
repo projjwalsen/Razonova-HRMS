@@ -109,6 +109,19 @@ export interface EmployeePayrollOverride {
   userId: string;
   employeeName?: string;
   components: EmployeePayrollComponent[];
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    department?: { id: string; name: string };
+    designation?: { id: string; name: string };
+    employeeProfile?: {
+      employeeCode?: string;
+      employmentType?: string;
+      joiningDate?: string;
+    };
+    baseSalary?: number;
+  };
 }
 
 // Full employee payroll data — includes base structure + overrides + computed salary
@@ -122,6 +135,12 @@ export interface EmployeePayrollComponentsDetail {
   payStructure?: PayStructure;
   overrides?: EmployeePayrollComponent[];
   components?: (EmployeePayrollComponent & { componentMaster?: PayrollComponentMaster })[];
+  // Flattened from nested user object
+  department?: string;
+  designation?: string;
+  employmentType?: string;
+  joiningDate?: string;
+  employeeEmail?: string;
 }
 
 // =============================================
@@ -273,7 +292,7 @@ export interface ProcessPayrollPayload {
 // =============================================
 
 export interface EmployeeProfile {
-  employeeCode: string;
+  employeeCode?: string;
   salary?: number;
   joiningDate?: string;
   employmentType?: string;
@@ -287,6 +306,7 @@ export interface BankAccount {
   isVerified?: boolean;
 }
 
+// Extended employee info used in overrides (enriched with API user data)
 export interface EmployeeInfo {
   id: string;
   name?: string;
@@ -295,6 +315,7 @@ export interface EmployeeInfo {
   designation?: { id: string; name: string };
   employeeProfile?: EmployeeProfile;
   bankAccount?: BankAccount;
+  baseSalary?: number;
 }
 
 // =============================================
@@ -598,23 +619,32 @@ export const fetchEmployeeOverrides = createAsyncThunk<
   { rejectValue: string }
 >('payroll/fetchEmployeeOverrides', async (userId, { rejectWithValue }) => {
   try {
+    // GET /org/payroll/employee-components/:userId
     const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch employee overrides');
-    const components: EmployeePayrollComponent[] = Array.isArray(data.data)
-      ? data.data.map((item: any) => ({
-          id: item.id,
-          payrollMasterComponentId: item.payrollMasterComponentId,
-          payrollMasterComponent: item.payrollMasterComponent,
-          payrollComponentMasterId: item.payrollMasterComponentId,
-          componentMaster: item.payrollMasterComponent,
-          valueType: item.valueType,
-          value: item.value,
-          isActive: item.isActive,
-          remarks: item.remarks,
-        }))
-      : [];
-    return { userId, components, employeeName: data.employeeName };
+
+    const payload = data.data || data;
+    const rawComponents: any[] = Array.isArray(payload.components) ? payload.components : [];
+
+    const components: EmployeePayrollComponent[] = rawComponents.map((item: any) => ({
+      id: item.id,
+      payrollMasterComponentId: item.payrollMasterComponentId || item.payrollComponentMasterId,
+      payrollMasterComponent: item.payrollMasterComponent || item.componentMaster,
+      payrollComponentMasterId: item.payrollMasterComponentId || item.payrollComponentMasterId,
+      componentMaster: item.payrollMasterComponent || item.componentMaster,
+      valueType: item.valueType || item.payrollMasterComponent?.valueType,
+      value: item.value,
+      isActive: item.isActive ?? true,
+      remarks: item.remarks || '',
+    }));
+
+    return {
+      userId: payload.user?.id || userId,
+      employeeName: payload.user?.name,
+      user: payload.user,
+      components,
+    };
   } catch {
     return rejectWithValue('Network error.');
   }
@@ -639,20 +669,27 @@ export const saveEmployeeOverrides = createAsyncThunk<
   }
 });
 
-// GET /employee-components/:userId — returns employee's full payroll structure + overrides
+// GET /pay-structure/user/:userId — returns employee's full payroll structure + overrides
 export const fetchEmployeePayrollComponents = createAsyncThunk<
   EmployeePayrollComponentsDetail,
   string,
   { rejectValue: string }
 >('payroll/fetchEmployeePayrollComponents', async (userId, { rejectWithValue }) => {
   try {
-    const res = await fetch(`${BASE}/employee-components/${userId}`, { headers: authHeaders() });
+    const res = await fetch(`${BASE}/pay-structure/user/${userId}`, { headers: authHeaders() });
     const json = await res.json();
     if (!res.ok) return rejectWithValue(json.message || 'Failed to fetch employee payroll components');
 
-    const items = json.data || [];
-    // Normalize: API uses payrollMasterComponentId / payrollMasterComponent
-    const components: EmployeePayrollComponent[] = (Array.isArray(items) ? items : []).map((item: any) => ({
+    // API returns { user: {...}, payStructure: { id, name, components: [...] } }
+    const payload = json.data;
+    if (!payload) return { userId, components: [] };
+
+    const user = payload.user || {};
+    const payStructure = payload.payStructure || {};
+
+    // Components live inside payStructure.components
+    const rawComponents = Array.isArray(payStructure.components) ? payStructure.components : [];
+    const components: EmployeePayrollComponent[] = rawComponents.map((item: any) => ({
       id: item.id,
       payrollMasterComponentId: item.payrollMasterComponentId,
       payrollMasterComponent: item.payrollMasterComponent,
@@ -667,7 +704,29 @@ export const fetchEmployeePayrollComponents = createAsyncThunk<
       updatedAt: item.updatedAt,
     }));
 
-    return { userId, components };
+    return {
+      userId: user.id || userId,
+      employeeName: user.name,
+      employeeEmail: user.email,
+      employeeCode: user.employeeProfile?.employeeCode,
+      joiningDate: user.employeeProfile?.joiningDate,
+      employmentType: user.employeeProfile?.employmentType,
+      baseSalary: user.baseSalary ?? user.employeeProfile?.salary,
+      department: user.department?.name,
+      designation: user.designation?.name,
+      payStructure: {
+        id: payStructure.id,
+        name: payStructure.name,
+        departmentId: payStructure.departmentId,
+        designationId: payStructure.designationId,
+        isDefault: payStructure.isDefault,
+        isActive: payStructure.isActive,
+        department: payStructure.department,
+        designation: payStructure.designation,
+        components: payStructure.components || [],
+      },
+      components,
+    };
   } catch {
     return rejectWithValue('Network error.');
   }
@@ -861,6 +920,24 @@ export const fetchMyPayrolls = createAsyncThunk<
   }
 });
 
+// GET /me-listing — Get logged-in employee's payroll history
+export const fetchMyPayrollRecords = createAsyncThunk<
+  PayrollRecord[],
+  void,
+  { rejectValue: string }
+>('payroll/fetchMyPayrollRecords', async (_, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/me-listing`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch my payroll records');
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    return [];
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
+
 // GET /payroll/:payrollId — Fetch my payroll detail (reuses fetchPayrollDetail with current userId)
 export const fetchMyPayrollDetail = createAsyncThunk<
   PayrollRecord,
@@ -881,10 +958,203 @@ export const fetchMyPayrollDetail = createAsyncThunk<
   }
 });
 
-// =============================================
-// SLICE
-// =============================================
+// GET /payroll/payslip/preview/:payrollId - Get payslip preview HTML/data
+export const fetchPayslipPreview = createAsyncThunk<
+  { html?: string; url?: string; data?: PayrollRecord },
+  string,
+  { rejectValue: string }
+>('payroll/fetchPayslipPreview', async (payrollId, { rejectWithValue }) => {
+  try {
+    const res = await fetch(`${BASE}/payslip/preview/${payrollId}`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) return rejectWithValue(data.message || 'Failed to fetch payslip preview');
+    return data.data || data;
+  } catch {
+    return rejectWithValue('Network error.');
+  }
+});
 
+// ── Payslip PDF download: tries backend route first, falls back to jsPDF client-side generation
+export const downloadPayslip = async (payrollId: string) => {
+  // Step 1: Try fetching PDF blob from backend route
+  try {
+    const res = await fetch(`${BASE}/me/payslip/download/${payrollId}`, {
+      headers: authHeaders(),
+    });
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `payslip-${payrollId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      return;
+    }
+  } catch {
+    // fall through to client-side generation
+  }
+
+  // Step 2: Client-side PDF generation via jsPDF
+  try {
+    const { default: jsPDF } = await import('jspdf');
+
+    const dataRes = await fetch(`${BASE}/${payrollId}`, { headers: authHeaders() });
+    const json = await dataRes.json();
+    const data: PayrollRecord = json.data || json;
+    if (!data || !data.id) return;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 20;
+
+    const fmt = (n: number | undefined | null) =>
+      n?.toLocaleString('en-IN') ?? '0';
+
+    const formatMonth = (m: number, y: number) =>
+      new Date(y, m - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    const GREEN: [number, number, number] = [2, 107, 173];
+    const GRAY: [number, number, number] = [100, 100, 100];
+    const LIGHT: [number, number, number] = [240, 240, 240];
+
+    let py = 20;
+
+    // Header
+    doc.setFillColor(...GREEN);
+    doc.rect(0, 0, pageW, 40, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYSLIP', margin, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatMonth(data.month, data.year), margin, 28);
+    doc.setFontSize(9);
+    doc.text(`Employee: ${data.user?.name || data.employeeName || '—'}`, margin, 36);
+
+    py = 50;
+    doc.setTextColor(...GRAY);
+    doc.setFontSize(8);
+    doc.text('Email', margin, py);
+    doc.text('Department', pageW / 2, py);
+    doc.text('Designation', pageW - margin, py);
+    py += 5;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.text(data.user?.email || data.employeeEmail || '—', margin, py);
+    doc.text(data.user?.department?.name || data.department || '—', pageW / 2, py);
+    doc.text(data.user?.designation?.name || data.designation || '—', pageW - margin, py);
+    py += 12;
+
+    // Summary cards
+    const cardW = (pageW - margin * 2 - 8) / 4;
+    const cards = [
+      { label: 'Base Salary', value: `₹${fmt(data.baseSalary || data.basicSalary)}`, bg: LIGHT },
+      { label: 'Gross Salary', value: `₹${fmt(data.grossSalary)}`, bg: [230, 244, 255] as [number, number, number] },
+      { label: 'Total Deductions', value: `₹${fmt(data.totalDeductions)}`, bg: [255, 235, 235] as [number, number, number] },
+      { label: 'Net Salary', value: `₹${fmt(data.netSalary)}`, bg: [232, 255, 232] as [number, number, number] },
+    ];
+    cards.forEach((card, i) => {
+      const cx = margin + i * (cardW + 2);
+      doc.setFillColor(...card.bg);
+      doc.roundedRect(cx, py, cardW, 22, 2, 2, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(...GRAY);
+      doc.text(card.label, cx + 4, py + 6);
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.text(card.value, cx + 4, py + 15);
+      doc.setFont('helvetica', 'normal');
+    });
+    py += 28;
+
+    // Sections
+    const items = data.items || [];
+    const earnings = items.filter((i: PayrollItem) => i.type === 'EARNING' || i.type === 'ALLOWANCE');
+    const deductions = items.filter((i: PayrollItem) => i.type === 'DEDUCTION' || i.type === 'TAX');
+    const bonuses = items.filter((i: PayrollItem) => i.type === 'BONUS');
+
+    const drawSection = (title: string, rows: PayrollItem[], isDeduction: boolean) => {
+      if (rows.length === 0) return;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...GREEN);
+      doc.text(title, margin, py);
+      py += 2;
+      doc.setDrawColor(...GREEN);
+      doc.line(margin, py, pageW - margin, py);
+      py += 5;
+      rows.forEach((item: PayrollItem) => {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(item.label || '—', margin, py);
+        const valText = `₹${fmt(item.amount)}`;
+        doc.text(isDeduction ? `-${valText}` : `+${valText}`, pageW - margin, py, { align: 'right' });
+        py += 6;
+      });
+      py += 4;
+    };
+
+    drawSection('EARNINGS & ALLOWANCES', earnings, false);
+    drawSection('BONUSES', bonuses, false);
+    drawSection('DEDUCTIONS & TAX', deductions, true);
+
+    // Attendance summary
+    if (data.daysSummary) {
+      const ds = data.daysSummary;
+      py += 2;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...GREEN);
+      doc.text('ATTENDANCE SUMMARY', margin, py);
+      py += 2;
+      doc.setDrawColor(...GREEN);
+      doc.line(margin, py, pageW - margin, py);
+      py += 5;
+      const days = [
+        { label: 'Present', value: ds.presentDays ?? 0 },
+        { label: 'Absent', value: ds.absentDays ?? 0 },
+        { label: 'Late', value: ds.lateCount ?? 0 },
+        { label: 'Half Days', value: ds.halfDays ?? 0 },
+        { label: 'Paid Leave', value: ds.paidLeaves ?? 0 },
+        { label: 'Unpaid', value: ds.unpaidLeaves ?? 0 },
+      ];
+      const dw = (pageW - margin * 2) / 3;
+      days.forEach((d, i) => {
+        const dx = margin + (i % 3) * dw;
+        const dy = i < 3 ? py : py + 14;
+        doc.setFillColor(...LIGHT);
+        doc.roundedRect(dx, dy, dw - 4, 12, 1, 1, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(...GRAY);
+        doc.text(d.label, dx + 3, dy + 5);
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(d.value), dx + 3, dy + 10);
+        doc.setFont('helvetica', 'normal');
+      });
+    }
+
+    py += 30;
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(...GRAY);
+    doc.setFont('helvetica', 'italic');
+    doc.text(`Generated on ${new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}`, margin, py);
+    doc.text('Confidential - For Employee Use Only', pageW - margin, py, { align: 'right' });
+
+    doc.save(`payslip-${payrollId}.pdf`);
+  } catch (e) {
+    console.error('Payslip generation failed:', e);
+  }
+};
 const payrollSlice = createSlice({
   name: 'payroll',
   initialState,
@@ -1096,9 +1366,24 @@ const payrollSlice = createSlice({
     builder.addCase(fetchMyPayrolls.fulfilled, (s, a) => { s.loading = false; s.myPayslips = a.payload; });
     builder.addCase(fetchMyPayrolls.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
 
+    builder.addCase(fetchMyPayrollRecords.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchMyPayrollRecords.fulfilled, (s, a) => {
+      s.loading = false;
+      // Merge with existing myPayslips to preserve enriched records
+      const incoming = a.payload;
+      const existingIds = new Set(incoming.map((p) => p.id));
+      const enriched = s.myPayslips.filter((r) => !existingIds.has(r.id));
+      s.myPayslips = [...incoming, ...enriched];
+    });
+    builder.addCase(fetchMyPayrollRecords.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
     builder.addCase(fetchMyPayrollDetail.pending, (s) => { s.loading = true; s.error = null; });
     builder.addCase(fetchMyPayrollDetail.fulfilled, (s, a) => { s.loading = false; s.myPayslipDetail = a.payload; });
     builder.addCase(fetchMyPayrollDetail.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
+
+    builder.addCase(fetchPayslipPreview.pending, (s) => { s.loading = true; s.error = null; });
+    builder.addCase(fetchPayslipPreview.fulfilled, (s) => { s.loading = false; });
+    builder.addCase(fetchPayslipPreview.rejected, (s, a) => { s.loading = false; s.error = a.payload as string; });
   },
 });
 
