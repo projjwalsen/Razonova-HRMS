@@ -56,6 +56,7 @@ import {
 } from '@/store/actions/payrollActions';
 import { fetchDepartments } from '@/store/actions/departmentActions';
 import { fetchDesignations } from '@/store/actions/designationActions';
+import { useAccess } from '@/lib/access';
 
 type AdminTab = 'dashboard' | 'components' | 'structures' | 'overrides' | 'generate' | 'listing';
 
@@ -747,11 +748,12 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
 // ─────────────────────────────────────────────
 // PAYROLL DETAIL MODAL
 // ─────────────────────────────────────────────
-const PayrollDetailModal = ({ open, record, onClose, onAction }: {
+const PayrollDetailModal = ({ open, record, onClose, onAction, hasPermission }: {
   open: boolean; record: PayrollRecord | null;
   onClose: () => void;
   onAction: (type: string, id: string) => void;
   loading: boolean;
+  hasPermission: (p: string) => boolean;
 }) => {
   if (!open || !record) return null;
 
@@ -900,34 +902,28 @@ const PayrollDetailModal = ({ open, record, onClose, onAction }: {
         {/* Actions */}
         {record.status !== 'PAID' && record.status !== 'CANCELLED' && (
           <div className="flex items-center justify-end gap-2 px-6 pb-6 border-t border-gray-100 pt-4">
-            {record.status === 'DRAFT' && (
+            {record.status === 'DRAFT' && hasPermission('EMPLOYEE_PAYROLL:OVERRIDE') && (
               <button onClick={() => onAction('adjust', record.id)}
                 className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-1.5">
                 <Settings className="w-4 h-4" /> Adjust
               </button>
             )}
-            {(record.status === 'DRAFT') && (
+            {record.status === 'DRAFT' && hasPermission('PAYROLL:PROCESS') && (
               <button onClick={() => onAction('process', record.id)}
                 className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold hover:bg-[#033080] flex items-center gap-1.5">
                 <CheckCircle className="w-4 h-4" /> Process
               </button>
             )}
-            {record.status === 'PROCESSED' && (
+            {record.status === 'PROCESSED' && hasPermission('PAYROLL:MARK_DISBURSE') && (
               <button onClick={() => onAction('disbursing', record.id)}
                 className="px-4 py-2 bg-yellow-500 text-white rounded-xl text-sm font-semibold hover:bg-yellow-600 flex items-center gap-1.5">
                 <ArrowRight className="w-4 h-4" /> Mark Disbursing
               </button>
             )}
-            {record.status === 'DISBURSING' && (
+            {record.status === 'DISBURSING' && hasPermission('PAYROLL:MARK_PAID') && (
               <button onClick={() => onAction('paid', record.id)}
                 className="px-4 py-2 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 flex items-center gap-1.5">
                 <Check className="w-4 h-4" /> Mark Paid
-              </button>
-            )}
-            {(record.status as PayrollStatus) !== 'PAID' && (record.status as PayrollStatus) !== 'CANCELLED' && (
-              <button onClick={() => onAction('failed', record.id)}
-                className="px-4 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-100 flex items-center gap-1.5">
-                <XCircle className="w-4 h-4" /> Mark Failed
               </button>
             )}
           </div>
@@ -949,6 +945,7 @@ export default function PayrollPage() {
   } = useAppSelector(s => s.payroll);
   const { departments } = useAppSelector(s => s.departments);
   const { designations } = useAppSelector(s => s.designations);
+  const { hasPermission } = useAccess();
 
   const now = new Date();
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -1123,6 +1120,17 @@ export default function PayrollPage() {
     (u.name || u.email || '').toLowerCase().includes(overrideSearch.toLowerCase())
   );
 
+  if (!hasPermission('PAYROLL:READ')) {
+    return (
+      <div className="p-8">
+        <div className="p-8 bg-white rounded-2xl border-2 border-gray-100 text-center">
+          <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">You do not have permission to access Payroll Management</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -1131,10 +1139,12 @@ export default function PayrollPage() {
           <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">Manage salaries, structures, and payroll processing</p>
         </div>
-        <button onClick={() => setShowGenerateModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#0445AD] hover:bg-[#033080] text-white rounded-xl text-sm font-semibold transition shadow-sm">
-          <Plus className="w-4 h-4" /> Generate Payroll
-        </button>
+        {hasPermission('PAYROLL:GENERATE') && (
+          <button onClick={() => setShowGenerateModal(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#0445AD] hover:bg-[#033080] text-white rounded-xl text-sm font-semibold transition shadow-sm">
+            <Plus className="w-4 h-4" /> Generate Payroll
+          </button>
+        )}
       </div>
 
       {/* Alerts */}
@@ -1245,10 +1255,12 @@ export default function PayrollPage() {
             title="Component Masters"
             subtitle="Define reusable salary components like Basic, HRA, Allowances, Deductions, Tax, Bonus"
             action={
-              <button onClick={() => { setEditingComponent(null); setShowComponentModal(true); }}
-                className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
-                <Plus className="w-4 h-4" /> Add Component
-              </button>
+              hasPermission('PERMISSION:CREATE') && (
+                <button onClick={() => { setEditingComponent(null); setShowComponentModal(true); }}
+                  className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
+                  <Plus className="w-4 h-4" /> Add Component
+                </button>
+              )
             }
           />
           {loading ? (
@@ -1298,10 +1310,12 @@ export default function PayrollPage() {
             title="Pay Structures"
             subtitle="Define company-wide or department/designation-wise salary templates"
             action={
-              <button onClick={() => { setEditingStructure(null); setShowStructureModal(true); }}
-                className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
-                <Plus className="w-4 h-4" /> Add Structure
-              </button>
+              hasPermission('PAY_STRUCTURE:CREATE') && (
+                <button onClick={() => { setEditingStructure(null); setShowStructureModal(true); }}
+                  className="px-4 py-2 bg-[#0445AD] text-white rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-[#033080]">
+                  <Plus className="w-4 h-4" /> Add Structure
+                </button>
+              )
             }
           />
           {loading ? (
@@ -1664,31 +1678,25 @@ export default function PayrollPage() {
                               className="p-1.5 text-gray-400 hover:text-[#0445AD] border border-gray-200 rounded-lg hover:bg-blue-50" title="View">
                               <Eye className="w-4 h-4" />
                             </button>
-                            {r.status === 'DRAFT' && (
+                            {r.status === 'DRAFT' && hasPermission('EMPLOYEE_PAYROLL:OVERRIDE') && (
                               <button onClick={() => { setAdjustRecord(r); setShowAdjustModal(true); }}
                                 className="p-1.5 text-gray-400 hover:text-yellow-600 border border-gray-200 rounded-lg hover:bg-yellow-50" title="Adjust">
                                 <Settings className="w-4 h-4" />
                               </button>
                             )}
-                            {(r.status === 'DRAFT') && (
+                            {r.status === 'DRAFT' && hasPermission('PAYROLL:PROCESS') && (
                               <button onClick={() => { setProcessRecord(r); setShowProcessModal(true); }}
                                 className="px-2.5 py-1 bg-[#0445AD] text-white rounded-lg text-xs font-semibold hover:bg-[#033080]" title="Process">
                                 <Check className="w-3.5 h-3.5" />
                               </button>
                             )}
-                            {r.status === 'PROCESSED' && (
+                            {r.status === 'PROCESSED' && hasPermission('PAYROLL:MARK_DISBURSE') && (
                               <button onClick={() => handleAction('disbursing', r.id)}
                                 className="px-2.5 py-1 bg-yellow-500 text-white rounded-lg text-xs font-semibold hover:bg-yellow-600">Disburse</button>
                             )}
-                            {r.status === 'DISBURSING' && (
+                            {r.status === 'DISBURSING' && hasPermission('PAYROLL:MARK_PAID') && (
                               <button onClick={() => handleAction('paid', r.id)}
                                 className="px-2.5 py-1 bg-green-500 text-white rounded-lg text-xs font-semibold hover:bg-green-600">Paid</button>
-                            )}
-                            {r.status !== 'PAID' && r.status !== 'CANCELLED' && (
-                              <button onClick={() => handleAction('failed', r.id)}
-                                className="p-1.5 text-red-400 hover:text-red-600 border border-red-200 rounded-lg hover:bg-red-50" title="Failed">
-                                <XCircle className="w-4 h-4" />
-                              </button>
                             )}
                         </td>
                       </tr>
@@ -1738,6 +1746,7 @@ export default function PayrollPage() {
         open={showDetailModal} record={detailRecord}
         onClose={() => { setShowDetailModal(false); setDetailRecord(null); }}
         onAction={handleAction} loading={processing}
+        hasPermission={hasPermission}
       />
 
       <ConfirmModal
