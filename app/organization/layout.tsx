@@ -16,6 +16,8 @@ const getActiveIdFromPath = (pathname: string): string => {
   if (pathname.includes("/domains")) return "domains";
   if (pathname.includes("/from-addresses")) return "from-addresses";
   if (pathname.includes("/email-auth")) return "email-auth";
+  if (pathname.includes("/roles")) return "roles";
+  if (pathname.includes("/permissions")) return "permissions";
   return "details";
 };
 

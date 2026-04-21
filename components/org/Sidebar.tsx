@@ -8,6 +8,8 @@ const navItems = [
     { label: "Organization Settings", id: "policy", href: "/organization/settings" },
     { label: "Departments", id: "departments", href: "/organization/departments" },
     { label: "Designations", id: "designations", href: "/organization/designations" },
+    { label: "Roles & Permissions", id: "roles", href: "/organization/roles" },
+    { label: "Permissions List", id: "permissions", href: "/organization/permissions" },
     { label: "Dashboard", id: "dashboard", href: "/company" },
 ];
 

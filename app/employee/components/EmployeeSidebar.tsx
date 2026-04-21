@@ -11,8 +11,10 @@ import {
   X,
   LogOut,
   Menu,
+  LayoutGrid,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useAppSelector } from '@/store/hooks';
 
 interface SidebarUser {
   name?: string;
@@ -32,7 +34,11 @@ export default function EmployeeSidebar() {
   const pathname = usePathname();
   const [user, setUser] = useState<SidebarUser>({});
   const [mobileOpen, setMobileOpen] = useState(false);
+  const access = useAppSelector((state) => state.auth.access);
 
+  const isCompanyAdmin = access?.roles?.some((r) =>
+    r.toUpperCase() !== 'EMPLOYEE'
+  ) || false;
   useEffect(() => {
     try {
       const u = localStorage.getItem('user');
@@ -98,6 +104,20 @@ export default function EmployeeSidebar() {
             </div>
           </div>
         </div>
+
+        {/* Admin Section Switch */}
+        {isCompanyAdmin && (
+          <div className="mx-3 my-3">
+            <Link
+              href="/company/dashboard"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold bg-[#0445AD] text-white shadow-sm hover:bg-[#033591] transition-all"
+            >
+              <LayoutGrid className="w-4.5 h-4.5 shrink-0" />
+              Switch to Admin
+            </Link>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
