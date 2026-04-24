@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   Building2,
   Calendar,
-  DollarSign,
+  HandCoins,
   Clock,
 } from 'lucide-react';
 
@@ -505,7 +505,7 @@ export default function SettingsPage() {
               {/* Currency & Taxation */}
               <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
                 <h3 className="text-xl font-bold font-['Montserrat'] mb-6 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
+                  <HandCoins className="w-5 h-5" />
                   Currency & Taxation
                 </h3>
                 <div className="space-y-4">

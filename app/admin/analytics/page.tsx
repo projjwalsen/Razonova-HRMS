@@ -5,7 +5,7 @@ import {
   TrendingUp,
   Users,
   Building2,
-  DollarSign,
+  HandCoins,
   Activity,
   BarChart3,
   Calendar,
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 analytics-item">
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
-              <DollarSign className="w-12 h-12 text-[#0445AD]" />
+              <HandCoins className="w-12 h-12 text-[#0445AD]" />
             </div>
             <div className="text-3xl font-bold mb-1 font-['Montserrat']">$284,700</div>
             <div className="text-sm text-gray-600 mb-2">Total Revenue</div>

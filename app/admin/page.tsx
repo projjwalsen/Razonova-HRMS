@@ -8,7 +8,7 @@ import {
   Settings,
   Activity,
   TrendingUp,
-  DollarSign,
+  HandCoins,
   AlertCircle,
   CheckCircle,
   Eye,
@@ -57,7 +57,7 @@ export default function SuperAdminDashboard() {
       value: '$284,700',
       change: '+15.3%',
       trend: 'up',
-      icon: DollarSign,
+      icon: HandCoins,
     },
     {
       title: 'Pending Issues',

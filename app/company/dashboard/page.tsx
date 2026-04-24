@@ -12,7 +12,7 @@ import {
   Briefcase,
   TrendingUp,
   GraduationCap,
-  DollarSign,
+  HandCoins,
   Settings,
   Menu,
   X,
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
     { name: 'Recruitment', href: '/company/recruitment', icon: Briefcase, active: false },
     { name: 'Performance', href: '/company/performance', icon: TrendingUp, active: false },
     { name: 'Training', href: '/company/training', icon: GraduationCap, active: false },
-    { name: 'Payroll', href: '/company/payroll', icon: DollarSign, active: false },
+    { name: 'Payroll', href: '/company/payroll', icon: HandCoins, active: false },
     { name: 'Settings', href: '/company/settings', icon: Settings, active: false },
   ];
 
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
                       href="/company/payroll"
                       className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-black hover:shadow-lg transition-all duration-300"
                     >
-                      <DollarSign className="w-8 h-8 mb-3 text-gray-700" />
+                      <HandCoins className="w-8 h-8 mb-3 text-gray-700" />
                       <h3 className="font-semibold mb-1">Payroll</h3>
                       <p className="text-xs text-gray-500">Process payroll and payslips</p>
                     </Link>

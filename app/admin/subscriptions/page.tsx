@@ -10,7 +10,7 @@ import {
   Save,
   Check,
   X,
-  DollarSign,
+  HandCoins,
   Users,
   HardDrive,
   Calendar,
@@ -43,7 +43,7 @@ interface Plan {
 const availableModules: Module[] = [
   { id: 'attendance', name: 'Attendance Management', icon: Calendar, description: 'Track employee attendance' },
   { id: 'leave', name: 'Leave Management', icon: Clock, description: 'Leave requests & approvals' },
-  { id: 'payroll', name: 'Payroll Management', icon: DollarSign, description: 'Salary processing & payslips' },
+  { id: 'payroll', name: 'Payroll Management', icon: HandCoins, description: 'Salary processing & payslips' },
   { id: 'recruitment', name: 'Recruitment', icon: Users, description: 'Job postings & candidates' },
   { id: 'training', name: 'Training', icon: TrendingUp, description: 'Employee training programs' },
   { id: 'performance', name: 'Performance', icon: Shield, description: 'Performance reviews' },

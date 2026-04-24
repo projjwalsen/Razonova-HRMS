@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchCountries } from "@/store/actions/metaActions";
+import { fetchCountries, fetchCurrencies } from "@/store/actions/metaActions";
 import { fetchSettings, saveSettings, GeneralSettings } from "@/store/actions/settingsActions";
 
 const timeFormats = [
@@ -21,12 +21,12 @@ const dateFormats = [
   { value: "dd/MM/yyyy", label: "01/01/2025" },
   { value: "MM/dd/yyyy", label: "01/01/2025" },
   { value: "yyyy-MM-dd", label: "2025-01-01" },
-  { value: "dd-MM-yyyy", label: "01-01-2025" },
+  { value: "dd-MMM-yyyy", label: "01-Jan-2025" },
 ];
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
-  const { countries, loading: metaLoading } = useAppSelector((state) => state.meta);
+  const { countries, currencies, loading: metaLoading } = useAppSelector((state) => state.meta);
   const { settings, loading, saving, error } = useAppSelector((state) => state.settings);
 
   const [form, setForm] = useState<GeneralSettings>({
@@ -35,12 +35,14 @@ export default function SettingsPage() {
     timeFormat: "12h",
     nameFormat: "firstName_lastName",
     dateFormat: "dd-MMM-yyyy",
+    currency: null,
   });
 
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     dispatch(fetchCountries());
+    dispatch(fetchCurrencies());
     dispatch(fetchSettings());
   }, [dispatch]);
 
@@ -77,6 +79,14 @@ export default function SettingsPage() {
     setForm((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleCurrencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCurrency = currencies.find((currency) => currency.code === e.target.value) || null;
+    setForm((prev) => ({
+      ...prev,
+      currency: selectedCurrency,
     }));
   };
 
@@ -217,9 +227,32 @@ export default function SettingsPage() {
                 </svg>
               </div>
             </FormRow>
-          </div>
 
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+            <FormRow label="Currency" required>
+              <div className="relative">
+                <select
+                  name="currency"
+                  value={form.currency?.code || ""}
+                  onChange={handleCurrencyChange}
+                  disabled={currencies.length === 0}
+                  className="w-full appearance-none border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#1a3a8f]/20 focus:border-[#1a3a8f] transition pr-8 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                >
+                  <option value="" disabled>
+                    {currencies.length === 0 ? "Loading currencies..." : "Select Currency"}
+                  </option>
+                  {currencies.map((currency) => (
+                    <option key={currency.code} value={currency.code}>
+                      {currency.code} — {currency.name}
+                    </option>
+                  ))}
+                </select>
+                <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </FormRow>
+          </div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
             <button
               onClick={handleSubmit}
               disabled={saving || loading}

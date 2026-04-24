@@ -28,6 +28,12 @@ export interface State {
   countryCode: string;
 }
 
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
 export const fetchIndustries = createAsyncThunk<Industry[], void>(
   "meta/fetchIndustries",
   async (_, { rejectWithValue }) => {
@@ -89,6 +95,35 @@ export const fetchCountries = createAsyncThunk<Country[], void>(
         return data.data;
       } else if (Array.isArray(data?.countries)) {
         return data.countries;
+      }
+
+      return [];
+    } catch (error) {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+export const fetchCurrencies = createAsyncThunk<Currency[], void>(
+  "meta/fetchCurrencies",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/meta/currencies`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return rejectWithValue(data.message || "Failed to fetch currencies");
+      }
+
+      if (Array.isArray(data)) {
+        return data;
+      } else if (Array.isArray(data?.data)) {
+        return data.data;
+      } else if (Array.isArray(data?.currencies)) {
+        return data.currencies;
       }
 
       return [];

@@ -12,7 +12,7 @@ import {
   MoreHorizontal,
   Users,
   Calendar,
-  DollarSign,
+  HandCoins,
   CheckCircle,
   XCircle,
   Clock,
@@ -330,7 +330,7 @@ export default function CompaniesPage() {
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-gray-500" />
+                          <HandCoins className="w-4 h-4 text-gray-500" />
                           <span className="font-semibold">${company.revenue.toLocaleString()}</span>
                         </div>
                       </td>

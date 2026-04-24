@@ -8,7 +8,7 @@ import {
   Trash2,
   Search,
   Users,
-  DollarSign,
+  HandCoins,
   Briefcase,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -395,7 +395,7 @@ export default function DepartmentsPage() {
                   )}
                   {dept.budget && (
                     <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="w-4 h-4 text-gray-500" />
+                      <HandCoins className="w-4 h-4 text-gray-500" />
                       <span className="text-gray-600">Budget:</span>
                       <span className="font-semibold">{dept.budget}</span>
                     </div>
@@ -452,7 +452,7 @@ export default function DepartmentsPage() {
                     })}
                   </p>
                 </div>
-                <DollarSign className="w-12 h-12 text-white/20" />
+                <HandCoins className="w-12 h-12 text-white/20" />
               </div>
             </div>
           </div>

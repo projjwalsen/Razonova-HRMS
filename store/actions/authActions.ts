@@ -21,6 +21,22 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -382,6 +398,84 @@ export const login = createAsyncThunk<AuthResponse, LoginPayload>(
 
       return data;
     } catch (error) {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+export const forgotPassword = createAsyncThunk<
+  AuthResponse,
+  ForgotPasswordPayload,
+  { rejectValue: string }
+>(
+  "auth/forgotPassword",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${BASE}/auth/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: payload.email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return rejectWithValue(data.message || "Failed to send OTP");
+      }
+      return data;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+export const verifyOtp = createAsyncThunk<
+  AuthResponse,
+  VerifyOtpPayload,
+  { rejectValue: string }
+>(
+  "auth/verifyOtp",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${BASE}/auth/verify-otp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: payload.email, otp: payload.otp }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return rejectWithValue(data.message || "OTP verification failed");
+      }
+      return data;
+    } catch {
+      return rejectWithValue("Network error. Please try again.");
+    }
+  }
+);
+
+export const resetPassword = createAsyncThunk<
+  AuthResponse,
+  ResetPasswordPayload,
+  { rejectValue: string }
+>(
+  "auth/resetPassword",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${BASE}/auth/reset-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return rejectWithValue(data.message || "Password reset failed");
+      }
+      return data;
+    } catch {
       return rejectWithValue("Network error. Please try again.");
     }
   }

@@ -1,11 +1,18 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
 export interface GeneralSettings {
   country: string;
   timezone: string;
   timeFormat: string;
   nameFormat: string;
   dateFormat: string;
+  currency: Currency | null;
 }
 
 export interface SettingItem {
@@ -85,6 +92,7 @@ export const saveSettings = createAsyncThunk<OrganizationSettings, GeneralSettin
           },
         ],
       };
+
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/settings-create`,

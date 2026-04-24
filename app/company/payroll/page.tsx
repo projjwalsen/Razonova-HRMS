@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  DollarSign,
+  HandCoins,
   Users,
   Clock,
   CheckCircle,
@@ -1124,7 +1124,7 @@ export default function PayrollPage() {
     return (
       <div className="p-8">
         <div className="p-8 bg-white rounded-2xl border-2 border-gray-100 text-center">
-          <DollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <HandCoins className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">You do not have permission to access Payroll Management</p>
         </div>
       </div>
@@ -1180,7 +1180,7 @@ export default function PayrollPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {[
-              { icon: DollarSign, label: 'Total Payroll', value: `₹${fmt(kpis?.totalPayroll)}`, bg: 'bg-[#0445AD]', sub: `${filteredRecords.length} records` },
+              { icon: HandCoins, label: 'Total Payroll', value: `₹${fmt(kpis?.totalPayroll)}`, bg: 'bg-[#0445AD]', sub: `${filteredRecords.length} records` },
               { icon: CheckCircle, label: 'Processed', value: kpis?.processedCount ?? 0, bg: 'bg-green-500', sub: 'employees' },
               { icon: Clock, label: 'Pending', value: kpis?.pendingCount ?? 0, bg: 'bg-yellow-500', sub: 'drafts' },
               { icon: AlertCircle, label: 'Failed', value: kpis?.failedCount ?? 0, bg: 'bg-red-500', sub: 'records' },
@@ -1211,7 +1211,7 @@ export default function PayrollPage() {
             </button>
             <button onClick={() => setShowGenerateModal(true)}
               className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-[#0445AD] transition">
-              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center"><DollarSign className="w-5 h-5 text-amber-600" /></div>
+              <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center"><HandCoins className="w-5 h-5 text-amber-600" /></div>
               <div className="text-left"><p className="text-sm font-semibold text-gray-800">Generate Payroll</p><p className="text-xs text-gray-400">Run monthly payroll</p></div>
             </button>
           </div>
@@ -1625,7 +1625,7 @@ export default function PayrollPage() {
           {loading ? (
             <div className="space-y-3"><div className="h-14 bg-gray-100 rounded-xl animate-pulse" /><div className="h-14 bg-gray-100 rounded-xl animate-pulse" /></div>
           ) : filteredRecords.length === 0 ? (
-            <EmptyState icon={DollarSign} title="No payroll records found" subtitle="Try adjusting filters or generate payroll" />
+            <EmptyState icon={HandCoins} title="No payroll records found" subtitle="Try adjusting filters or generate payroll" />
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">

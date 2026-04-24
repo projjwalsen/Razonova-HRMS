@@ -46,7 +46,17 @@
       "Bash(awk 'NR==337,NR==360' app/company/attendance/page.tsx)",
       "Bash(node -e \"const l=require\\('fs'\\).readFileSync\\('app/company/attendance/page.tsx','utf8'\\).split\\('\\\\n'\\);let depth=0;let lastP8Close=-1;for\\(let i=l.findIndex\\(x=>x.trim\\(\\)==='return \\('\\)+1;i<l.length;i++\\){const t=l[i].trim\\(\\);if\\(t.startsWith\\('<div'\\)\\)depth++;else if\\(t.startsWith\\('</div>'\\)\\){depth--;if\\(depth<0&&l[i].trim\\(\\)==='</div>'\\){lastP8Close=i;break;}}}console.log\\('lastP8Close:',lastP8Close,JSON.stringify\\(l[lastP8Close]\\)\\);\")",
       "Bash(awk 'NR==338,NR==350' app/company/attendance/page.tsx)",
-      "Bash(awk 'NR==340' app/company/attendance/page.tsx)"
+      "Bash(awk 'NR==340' app/company/attendance/page.tsx)",
+      "WebFetch(domain:minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com)",
+      "Bash(curl -s -L -o \"c:/Users/RAZONOVA/Desktop/hrms/hero_ref.png\" \"https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-04-23%2FMiniMax-M2.7%2F1984120508307743586%2Fb07ca615110f8d23dcacf1b2b4d0ac107d4df646ee6d85f4f2ff0ca5d3522e43..png?Expires=1777025651&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=nFgya%2BeHXJ8nOPemGQaPxzkFKVQ%3D\")",
+      "Bash(identify \"c:/Users/RAZONOVA/Desktop/hrms/hero_ref.png\")",
+      "Bash(curl -s -L -o \"c:/Users/RAZONOVA/Desktop/hrms/hero_bug.jpg\" \"https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-04-23%2FMiniMax-M2.7%2F1984120508307743586%2Ffca129ccfc8d73103970998b632d318c1137bbfadcf56add89cbb368fc0ed136..jpeg?Expires=1777028881&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=sjavfHDNthzyMUy5BYVcINhVDzc%3D\")",
+      "Bash(curl -s -L -o \"c:/Users/RAZONOVA/Desktop/hrms/carousel_ref.png\" \"https://minimax-algeng-chat-tts-us.oss-us-east-1.aliyuncs.com/ccv2%2F2026-04-23%2FMiniMax-M2.7%2F1984120508307743586%2F7b98386d19a2b6741b0e74f120c6be214e6dd695096c3f50efe9e87a242ca07f..png?Expires=1777029268&OSSAccessKeyId=LTAI5tCpJNKCf5EkQHSuL9xg&Signature=6xvbYoMqgcaKBTdA5uu32Az%2Fdqo%3D\")",
+      "Bash(npm list *)",
+      "Bash(pip show *)",
+      "Bash(python -c \"import docx; print\\('python-docx available'\\)\")",
+      "Bash(npm install *)",
+      "Bash(node generate_docx.js)"
     ]
   }
 }
