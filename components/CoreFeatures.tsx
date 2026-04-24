@@ -54,7 +54,7 @@ const CoreFeatures = () => {
             <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-900 shadow-[0_40px_120px_rgba(15,23,42,0.12)]">
               <div className="relative min-h-[260px] md:min-h-[340px] lg:min-h-[540px] w-full">
                 <Image
-                  src="/core.jpg"
+                  src="/core.jpeg"
                   alt="Team working on HR dashboard"
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 700px"
