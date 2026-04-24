@@ -3,15 +3,18 @@ import {
   fetchIndustries,
   fetchCountries,
   fetchStates,
+  fetchCurrencies,
   Industry,
   Country,
   State,
+  Currency,
 } from "@/store/actions/metaActions";
 
 interface MetaState {
   industries: Industry[];
   countries: Country[];
   states: State[];
+  currencies: Currency[];
   loading: boolean;
   error: string | null;
 }
@@ -20,6 +23,7 @@ const initialState: MetaState = {
   industries: [],
   countries: [],
   states: [],
+  currencies: [],
   loading: false,
   error: null,
 };
@@ -83,6 +87,23 @@ const metaSlice = createSlice({
       }
     );
     builder.addCase(fetchStates.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch Currencies
+    builder.addCase(fetchCurrencies.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(
+      fetchCurrencies.fulfilled,
+      (state, action: PayloadAction<Currency[]>) => {
+        state.loading = false;
+        state.currencies = action.payload;
+      }
+    );
+    builder.addCase(fetchCurrencies.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   CalendarCheck,
   Clock,
-  DollarSign,
+  HandCoins,
   FileText,
   LayoutDashboard,
   X,
@@ -26,7 +26,7 @@ const navItems = [
   { href: '/employee', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/employee/leave', label: 'My Leave', icon: CalendarCheck },
   { href: '/employee/attendance', label: 'My Attendance', icon: Clock },
-  { href: '/employee/payroll', label: 'Payroll', icon: DollarSign },
+  { href: '/employee/payroll', label: 'Payroll', icon: HandCoins },
   { href: '#', label: 'Documents', icon: FileText, disabled: true },
 ];
 

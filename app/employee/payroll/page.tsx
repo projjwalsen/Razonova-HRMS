@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  DollarSign,
+  HandCoins,
   Clock,
   CheckCircle,
   XCircle,
@@ -561,7 +561,7 @@ export default function EmployeePayrollPage() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { icon: DollarSign, label: 'Net Salary', value: `₹${fmt(netTotal)}`, bg: 'bg-[#0445AD]', sub: filtered.length > 0 ? `${filtered.length} record${filtered.length !== 1 ? 's' : ''}` : '—' },
+          { icon: HandCoins, label: 'Net Salary', value: `₹${fmt(netTotal)}`, bg: 'bg-[#0445AD]', sub: filtered.length > 0 ? `${filtered.length} record${filtered.length !== 1 ? 's' : ''}` : '—' },
           { icon: FileText, label: 'Gross Salary', value: `₹${fmt(grossTotal)}`, bg: 'bg-green-500', sub: 'this month' },
           { icon: XCircle, label: 'Deductions', value: `₹${fmt(deductionTotal)}`, bg: 'bg-red-500', sub: 'this month' },
           { icon: CheckCircle, label: 'Status', value: filtered.length > 0 ? (Object.keys(statusCounts)[0] || '—') : '—', bg: 'bg-purple-500', sub: Object.keys(statusCounts).length > 0 ? Object.entries(statusCounts).map(([k, v]) => `${v} ${k.toLowerCase()}`).join(', ') : 'no records' },

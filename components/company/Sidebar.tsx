@@ -8,7 +8,7 @@ import {
   Clock,
   CalendarCheck,
   Users,
-  DollarSign,
+  HandCoins,
   Briefcase,
   TrendingUp,
   GraduationCap,
@@ -19,7 +19,7 @@ import {
   ChevronRight,
   LogOut,
   Bell,
-  User,
+  User
 } from 'lucide-react';
 import { useAppDispatch } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
@@ -37,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/company/departments', label: 'Departments', icon: Building },
   { href: '/company/attendance', label: 'Attendance', icon: Clock },
   { href: '/company/leave', label: 'Leave', icon: CalendarCheck },
-  { href: '/company/payroll', label: 'Payroll', icon: DollarSign },
+  { href: '/company/payroll', label: 'Payroll', icon: HandCoins },
   { href: '/company/recruitment', label: 'Recruitment', icon: Briefcase },
   { href: '/company/performance', label: 'Performance', icon: TrendingUp },
   { href: '/company/training', label: 'Training', icon: GraduationCap },

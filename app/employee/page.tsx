@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, CalendarCheck, DollarSign, FileText } from 'lucide-react';
+import { Clock, CalendarCheck, HandCoins, FileText } from 'lucide-react';
 
 export default function EmployeeDashboard() {
   const [user, setUser] = useState<{ name?: string; email?: string }>({});
@@ -26,7 +26,7 @@ export default function EmployeeDashboard() {
         {[
           { label: 'Attendance', icon: Clock, color: 'text-blue-600 bg-blue-50' },
           { label: 'Leave', icon: CalendarCheck, color: 'text-green-600 bg-green-50' },
-          { label: 'Payroll', icon: DollarSign, color: 'text-purple-600 bg-purple-50' },
+          { label: 'Payroll', icon: HandCoins, color: 'text-purple-600 bg-purple-50' },
           { label: 'Documents', icon: FileText, color: 'text-orange-600 bg-orange-50' },
         ].map(({ label, icon: Icon, color }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer">

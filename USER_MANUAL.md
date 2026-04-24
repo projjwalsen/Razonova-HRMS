@@ -1,4 +1,4 @@
-# HRFlow HRMS — User Manual
+# HRAutomata HRMS — User Manual
 
 ---
 
@@ -37,7 +37,7 @@
 
 **URL:** `/`
 
-The landing page is the public marketing site for HRFlow. It includes:
+The landing page is the public marketing site for HRAutomata. It includes:
 
 - **Navbar**: Feature highlights, product modules, AI capabilities, and company information via dropdown menus
 - **Hero Section**: Product overview with "Get Started" and "Book Demo" call-to-action buttons
@@ -777,7 +777,7 @@ A complete history of your payroll records:
 
 ## 5. Role-Based Access Control
 
-HRFlow uses a Role-Based Access Control (RBAC) system. Each user is assigned one or more **roles**, and each role has one or more **permissions**.
+HRAutomata uses a Role-Based Access Control (RBAC) system. Each user is assigned one or more **roles**, and each role has one or more **permissions**.
 
 ### Key Concepts
 
@@ -812,7 +812,7 @@ Users who have both an `EMPLOYEE` role AND a non-employee role (e.g., HR Manager
 
 ## 6. Permission Reference
 
-The following permissions control access to HRFlow features:
+The following permissions control access to HRAutomata features:
 
 | Permission | Where Used | Description |
 |---|---|---|
@@ -832,4 +832,4 @@ The following permissions control access to HRFlow features:
 
 ---
 
-*Document version 1.0 — generated for HRFlow HRMS*
+*Document version 1.0 — generated for HRAutomata HRMS*

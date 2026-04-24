@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   FileText,
-  DollarSign,
+  HandCoins,
   CalendarDays,
   Users,
   BarChart3,
@@ -27,7 +27,7 @@ export default function ReportsPage() {
 
   const reportTypes = [
     { id: 'attendance', name: 'Attendance Reports', icon: FileText, description: 'Employee attendance and time tracking' },
-    { id: 'payroll', name: 'Payroll Reports', icon: DollarSign, description: 'Salary, deductions, and compensation' },
+    { id: 'payroll', name: 'Payroll Reports', icon: HandCoins, description: 'Salary, deductions, and compensation' },
     { id: 'leave', name: 'Leave Reports', icon: CalendarDays, description: 'Leave balances and usage' },
     { id: 'recruitment', name: 'Recruitment Reports', icon: Users, description: 'Hiring and candidate metrics' },
   ];
