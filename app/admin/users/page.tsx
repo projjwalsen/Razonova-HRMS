@@ -4,120 +4,87 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Users,
   Search,
-  Filter,
   Shield,
   Building2,
-  Calendar,
   Activity,
   MoreHorizontal,
   ChevronDown,
   Eye,
   Edit,
-  Trash2,
+  XCircle,
 } from 'lucide-react';
 import Tooltip from '@/components/Tooltip';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { fetchPlatformUsers } from '@/store/actions/adminActions';
 
 export default function UsersPage() {
-  const [activeTab, setActiveTab] = useState<'all' | 'admins' | 'employees' | 'suspended'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const dispatch = useAppDispatch();
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const { orgUsers, usersLoading } = useAppSelector((state) => state.admin);
+
+  const [activeTab, setActiveTab] = useState<'all' | 'admins' | 'employees' | 'suspended'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'grouped'>('table');
+
   useEffect(() => {
-    // CSS animations - no blur
+    dispatch(fetchPlatformUsers({ type: 'all', search: searchTerm }));
+  }, [dispatch, searchTerm]);
+
+  useEffect(() => {
+    const type = activeTab === 'admins' ? 'admins' : activeTab === 'employees' ? 'employees' : 'all';
+    dispatch(fetchPlatformUsers({ type, search: searchTerm }));
+  }, [dispatch, activeTab, searchTerm]);
+
+  useEffect(() => {
     const items = contentRef.current?.querySelectorAll('.user-item');
     items?.forEach((item, index) => {
       (item as HTMLElement).style.animation = `fadeInSmooth 0.5s ease-out ${index * 0.1}s forwards`;
       (item as HTMLElement).style.opacity = '0';
     });
-  }, [activeTab]);
+  }, [activeTab, viewMode]);
 
-  const [allUsers] = useState([
-    {
-      id: 1,
-      name: 'John Smith',
-      email: 'john@acme.com',
-      role: 'Company Admin',
-      company: 'Acme Corporation',
-      status: 'Active',
-      lastLogin: '2 hours ago',
-      joinedDate: '2024-01-15',
-      sessions: 45,
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      email: 'sarah@techstart.com',
-      role: 'Company Admin',
-      company: 'TechStart Inc',
-      status: 'Active',
-      lastLogin: '1 day ago',
-      joinedDate: '2024-02-20',
-      sessions: 32,
-    },
-    {
-      id: 3,
-      name: 'Mike Davis',
-      email: 'mike@global.com',
-      role: 'Company Admin',
-      company: 'Global Solutions',
-      status: 'Active',
-      lastLogin: '5 hours ago',
-      joinedDate: '2023-11-10',
-      sessions: 128,
-    },
-    {
-      id: 4,
-      name: 'Emily Chen',
-      email: 'emily@startuplabs.com',
-      role: 'Company Admin',
-      company: 'Startup Labs',
-      status: 'Active',
-      lastLogin: '30 minutes ago',
-      joinedDate: '2024-03-01',
-      sessions: 12,
-    },
-    {
-      id: 5,
-      name: 'Robert Wilson',
-      email: 'robert@digital.com',
-      role: 'Employee',
-      company: 'Digital Dynamics',
-      status: 'Active',
-      lastLogin: '3 hours ago',
-      joinedDate: '2023-12-05',
-      sessions: 67,
-    },
-    {
-      id: 6,
-      name: 'Super Admin',
-      email: 'admin@hrms.com',
-      role: 'Super Admin',
-      company: 'System',
-      status: 'Active',
-      lastLogin: 'Online',
-      joinedDate: '2023-01-01',
-      sessions: 1245,
-    },
-  ]);
+  // Flatten all users for easier filtering
+  const allUsers = orgUsers.flatMap(org => org.users.map(user => ({
+    ...user,
+    tenantName: org.company.tenantName,
+    tenantId: org.company.id,
+    companyStatus: org.company.status,
+  })));
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'Super Admin':
-        return 'bg-purple-100 text-purple-700';
-      case 'Company Admin':
-        return 'bg-blue-100 text-blue-700';
-      case 'Employee':
-        return 'bg-gray-100 text-gray-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
+  // Stats calculations
+  const totalUsers = allUsers.length;
+  const companyAdmins = allUsers.filter(u => u.roles.some(r => r.name === 'COMPANY_ADMIN')).length;
+  const uniqueCompanies = orgUsers.length;
+  const activeUsers = allUsers.filter(u => u.isActive).length;
+
+  const getRoleLabel = (roles: { name: string }[]) => {
+    if (roles.some(r => r.name === 'COMPANY_ADMIN')) return 'Company Admin';
+    if (roles.some(r => r.name === 'EMPLOYEE')) return 'Employee';
+    return 'User';
   };
 
-  const filteredUsers = allUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.company.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getRoleColor = (roles: { name: string }[]) => {
+    if (roles.some(r => r.name === 'COMPANY_ADMIN')) return 'bg-blue-100 text-blue-700';
+    if (roles.some(r => r.name === 'EMPLOYEE')) return 'bg-gray-100 text-gray-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const filteredUsers = allUsers.filter(user => {
+    const roleLabel = getRoleLabel(user.roles);
+    if (activeTab === 'admins' && roleLabel !== 'Company Admin') return false;
+    if (activeTab === 'employees' && roleLabel !== 'Employee') return false;
+    if (activeTab === 'suspended' && user.isActive) return false;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      return (
+        user.name.toLowerCase().includes(search) ||
+        user.email.toLowerCase().includes(search) ||
+        (user.phone || '').toLowerCase().includes(search)
+      );
+    }
+    return true;
+  });
 
   return (
     <div className="p-8">
@@ -128,16 +95,6 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold font-['Montserrat']">User Management</h1>
             <p className="text-gray-600 mt-1">Manage all users across companies</p>
           </div>
-          <div className="flex gap-4">
-            <button className="px-6 py-3 bg-white border-2 border-gray-200 rounded-lg font-semibold hover:border-black transition-all duration-300 flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filters
-            </button>
-            <button className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Add User
-            </button>
-          </div>
         </div>
 
         {/* Stats */}
@@ -146,45 +103,67 @@ export default function UsersPage() {
             <div className="flex items-center justify-between mb-4">
               <Users className="w-12 h-12 text-[#0445AD]" />
             </div>
-            <div className="text-3xl font-bold font-['Montserrat']">{allUsers.length}</div>
+            <div className="text-3xl font-bold font-['Montserrat']">{totalUsers}</div>
             <div className="text-sm text-gray-600">Total Users</div>
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <Shield className="w-12 h-12 text-purple-600" />
             </div>
-            <div className="text-3xl font-bold font-['Montserrat']">{allUsers.filter(u => u.role === 'Company Admin').length}</div>
+            <div className="text-3xl font-bold font-['Montserrat']">{companyAdmins}</div>
             <div className="text-sm text-gray-600">Company Admins</div>
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <Building2 className="w-12 h-12 text-blue-600" />
             </div>
-            <div className="text-3xl font-bold font-['Montserrat']">{new Set(allUsers.map(u => u.company)).size}</div>
+            <div className="text-3xl font-bold font-['Montserrat']">{uniqueCompanies}</div>
             <div className="text-sm text-gray-600">Companies</div>
           </div>
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <Activity className="w-12 h-12 text-green-600" />
             </div>
-            <div className="text-3xl font-bold font-['Montserrat']">
-              {allUsers.filter(u => u.lastLogin === 'Online').length}
-            </div>
-            <div className="text-sm text-gray-600">Currently Online</div>
+            <div className="text-3xl font-bold font-['Montserrat']">{activeUsers}</div>
+            <div className="text-sm text-gray-600">Active Users</div>
           </div>
         </div>
 
         {/* Search */}
         <div className="mb-6 user-item">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, email, or company..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            />
+          <div className="flex gap-4 items-center">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-[#0445AD] text-white'
+                    : 'bg-white border-2 border-gray-200 hover:border-black'
+                }`}
+              >
+                Table View
+              </button>
+              <button
+                onClick={() => setViewMode('grouped')}
+                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                  viewMode === 'grouped'
+                    ? 'bg-[#0445AD] text-white'
+                    : 'bg-white border-2 border-gray-200 hover:border-black'
+                }`}
+              >
+                Grouped by Company
+              </button>
+            </div>
           </div>
         </div>
 
@@ -199,7 +178,7 @@ export default function UsersPage() {
                   : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
-              All Users
+              All Users ({totalUsers})
             </button>
             <button
               onClick={() => setActiveTab('admins')}
@@ -209,7 +188,7 @@ export default function UsersPage() {
                   : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
-              Company Admins
+              Company Admins ({companyAdmins})
             </button>
             <button
               onClick={() => setActiveTab('employees')}
@@ -219,7 +198,7 @@ export default function UsersPage() {
                   : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
-              Employees
+              Employees ({totalUsers - companyAdmins})
             </button>
             <button
               onClick={() => setActiveTab('suspended')}
@@ -229,111 +208,197 @@ export default function UsersPage() {
                   : 'text-gray-500 hover:text-[#0445AD]'
               }`}
             >
-              Suspended
+              Suspended ({totalUsers - activeUsers})
             </button>
           </div>
         </div>
 
-        {/* Users Table */}
+        {/* Users Content */}
         <div className="user-item">
           <div className="p-6 bg-white rounded-xl border-2 border-gray-100">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b-2 border-gray-100">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">
-                      <div className="flex items-center gap-2">
-                        User
-                        <ChevronDown className="w-4 h-4 cursor-pointer" />
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Role</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Last Login</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Sessions</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-4 px-4">
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No users found</p>
+              </div>
+            ) : viewMode === 'table' ? (
+              // Table View
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-gray-100">
+                      <th className="text-left py-3 px-4 font-semibold text-sm">
+                        <div className="flex items-center gap-2">
+                          User
+                          <ChevronDown className="w-4 h-4 cursor-pointer" />
+                        </div>
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Role</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Company</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Department</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Phone</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Joined</th>
+                      <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                              user.roles.some(r => r.name === 'COMPANY_ADMIN') ? 'bg-blue-600' : 'bg-gray-600'
+                            }`}>
+                              {(user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-semibold">{user.name || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{user.email || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.roles)}`}>
+                            {getRoleLabel(user.roles)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="w-4 h-4 text-gray-500" />
+                            <span className="font-medium">{user.tenantName || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm">{user.department?.name || '—'}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm">{user.phone || '—'}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              user.isActive ? 'bg-green-500' : 'bg-red-500'
+                            }`} />
+                            <span className="text-sm">{user.isActive ? 'Active' : 'Inactive'}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-gray-500">
+                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex gap-2">
+                            <Tooltip content="View Details">
+                              <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
+                            <Tooltip content="Edit User">
+                              <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
+                            <Tooltip content="Suspend">
+                              <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            </Tooltip>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              // Grouped by Company View
+              <div className="space-y-6">
+                {orgUsers.map((org) => {
+                  const filteredCompanyUsers = org.users.filter(user => {
+                    const roleLabel = getRoleLabel(user.roles);
+                    if (activeTab === 'admins' && roleLabel !== 'Company Admin') return false;
+                    if (activeTab === 'employees' && roleLabel !== 'Employee') return false;
+                    if (activeTab === 'suspended' && user.isActive) return false;
+                    if (searchTerm) {
+                      const search = searchTerm.toLowerCase();
+                      return (
+                        user.name.toLowerCase().includes(search) ||
+                        user.email.toLowerCase().includes(search) ||
+                        (user.phone || '').toLowerCase().includes(search)
+                      );
+                    }
+                    return true;
+                  });
+
+                  if (filteredCompanyUsers.length === 0) return null;
+
+                  return (
+                    <div key={org.company.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="p-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                            user.role === 'Super Admin' ? 'bg-purple-600' :
-                            user.role === 'Company Admin' ? 'bg-blue-600' :
-                            'bg-gray-600'
-                          }`}>
-                            {user.name.split(' ').map(n => n[0]).join('')}
+                          <div className="w-10 h-10 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                            {(org.company.tenantName || 'CO').slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-semibold">{user.name}</p>
-                            <p className="text-xs text-gray-500">{user.email}</p>
+                            <p className="font-semibold">{org.company.tenantName || 'Unknown Company'}</p>
+                            <p className="text-xs text-gray-500">
+                              {org.company.totalUsers} users • {org.company.status}
+                            </p>
                           </div>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.role)}`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-500" />
-                          <span className="font-medium">{user.company}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            user.lastLogin === 'Online' ? 'bg-green-500' :
-                            'bg-gray-300'
-                          }`} />
-                          <span className="text-sm">{user.status}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar className="w-4 h-4 text-gray-500" />
-                          <span>{user.lastLogin}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Activity className="w-4 h-4 text-gray-500" />
-                          <span className="font-semibold">{user.sessions}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex gap-2">
-                          <Tooltip content="View Details">
-                            <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="Edit User">
-                            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="Suspend">
-                            <button className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                              <Shield className="w-4 h-4" />
-                            </button>
-                          </Tooltip>
-                          <Tooltip content="More Options">
-                            <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-                          </Tooltip>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {filteredCompanyUsers.map((user) => (
+                          <div key={user.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                                user.roles.some(r => r.name === 'COMPANY_ADMIN') ? 'bg-blue-600' : 'bg-gray-600'
+                              }`}>
+                                {(user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-semibold">{user.name || 'N/A'}</p>
+                                <p className="text-xs text-gray-500">{user.email || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleColor(user.roles)}`}>
+                                {getRoleLabel(user.roles)}
+                              </span>
+                              <span className="text-xs text-gray-500">{user.department?.name || '—'}</span>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  user.isActive ? 'bg-green-500' : 'bg-red-500'
+                                }`} />
+                                <span className="text-sm">{user.isActive ? 'Active' : 'Inactive'}</span>
+                              </div>
+                              <div className="flex gap-1">
+                                <Tooltip content="View">
+                                  <button className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                                    <Eye className="w-4 h-4" />
+                                  </button>
+                                </Tooltip>
+                                <Tooltip content="Edit">
+                                  <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                </Tooltip>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

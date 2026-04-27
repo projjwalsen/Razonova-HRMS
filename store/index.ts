@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/authSlice";
+import adminReducer from "./slices/adminSlice";
 import organizationReducer from "./actions/organizationActions";
 import metaReducer from "./slices/metaSlice";
 import settingsReducer from "./actions/settingsActions";
@@ -13,6 +14,7 @@ import payrollReducer from "./actions/payrollActions";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    admin: adminReducer,
     organization: organizationReducer,
     meta: metaReducer,
     settings: settingsReducer,
