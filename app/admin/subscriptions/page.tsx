@@ -138,9 +138,13 @@ export default function SubscriptionSetupPage() {
 
   const handleUpdateModules = async () => {
     if (!updatingTenantId || updateModules.length === 0) return;
+    const transformedModules = updateModules.map(m => ({
+      moduleKey: m.key,
+      isEnabled: m.isEnabled,
+    }));
     await dispatch(updateTenantModules({
       tenantId: updatingTenantId,
-      modules: updateModules,
+      modules: transformedModules,
     }));
   };
 
