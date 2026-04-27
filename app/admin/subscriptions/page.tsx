@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import {
-  Settings,
   Plus,
   Edit,
   Trash2,
@@ -12,7 +10,6 @@ import {
   X,
   HandCoins,
   Users,
-  HardDrive,
   Calendar,
   TrendingUp,
   Shield,
@@ -20,460 +17,621 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Eye,
+  Building2,
 } from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  fetchSubscriptionModules,
+  upsertSubscriptionModule,
+  fetchOrganizations,
+  fetchSubscribedTenants,
+  fetchActiveSubscription,
+  assignModulesToTenant,
+  updateTenantModules,
+  cancelSubscription,
+  clearActiveSubscription,
+  SubscriptionModule,
+} from '@/store/actions/adminActions';
 
-interface Module {
-  id: string;
-  name: string;
-  icon: any;
-  description: string;
-}
-
-interface Plan {
-  id: string;
-  name: string;
-  price: { monthly: number; annual: number };
-  currency: string;
-  employeeLimit: number;
-  storageLimit: number;
-  modules: string[];
-  isActive: boolean;
-}
-
-const availableModules: Module[] = [
-  { id: 'attendance', name: 'Attendance Management', icon: Calendar, description: 'Track employee attendance' },
-  { id: 'leave', name: 'Leave Management', icon: Clock, description: 'Leave requests & approvals' },
-  { id: 'payroll', name: 'Payroll Management', icon: HandCoins, description: 'Salary processing & payslips' },
-  { id: 'recruitment', name: 'Recruitment', icon: Users, description: 'Job postings & candidates' },
-  { id: 'training', name: 'Training', icon: TrendingUp, description: 'Employee training programs' },
-  { id: 'performance', name: 'Performance', icon: Shield, description: 'Performance reviews' },
-  { id: 'analytics', name: 'Analytics', icon: FileText, description: 'Reports & insights' },
-  { id: 'time_tracking', name: 'Time Tracking', icon: Clock, description: 'Project time tracking' },
-  { id: 'benefits', name: 'Benefits', icon: Users, description: 'Employee benefits' },
-  { id: 'documents', name: 'Documents', icon: FileText, description: 'Document management' },
-];
+const moduleIcons: Record<string, any> = {
+  ATTENDANCE: Calendar,
+  LEAVE: Clock,
+  PAYROLL: HandCoins,
+  RECRUITMENT: Users,
+  TRAINING: TrendingUp,
+  PERFORMANCE: Shield,
+  ANALYTICS: FileText,
+  TIME_TRACKING: Clock,
+  BENEFITS: Users,
+  DOCUMENTS: FileText,
+};
 
 export default function SubscriptionSetupPage() {
-  const [plans, setPlans] = useState<Plan[]>([
-    {
-      id: 'starter',
-      name: 'Starter',
-      price: { monthly: 0, annual: 0 },
-      currency: 'USD',
-      employeeLimit: 10,
-      storageLimit: 1,
-      modules: ['attendance', 'leave'],
-      isActive: true,
-    },
-    {
-      id: 'professional',
-      name: 'Professional',
-      price: { monthly: 49, annual: 470 },
-      currency: 'USD',
-      employeeLimit: 50,
-      storageLimit: 10,
-      modules: ['attendance', 'leave', 'payroll', 'training', 'performance'],
-      isActive: true,
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      price: { monthly: 149, annual: 1420 },
-      currency: 'USD',
-      employeeLimit: 200,
-      storageLimit: 50,
-      modules: ['attendance', 'leave', 'payroll', 'recruitment', 'training', 'performance', 'analytics'],
-      isActive: true,
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: { monthly: 399, annual: 3830 },
-      currency: 'USD',
-      employeeLimit: -1,
-      storageLimit: -1,
-      modules: ['attendance', 'leave', 'payroll', 'recruitment', 'training', 'performance', 'analytics', 'time_tracking', 'benefits', 'documents'],
-      isActive: true,
-    },
-  ]);
+  const dispatch = useAppDispatch();
 
-  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const { subscriptionModules, organizations, subscribedTenants, activeSubscription, modulesLoading, subscriptionLoading, orgLoading, actionLoading, actionSuccess, actionError } = useAppSelector((state) => state.admin);
+
+  const [activeTab, setActiveTab] = useState<'modules' | 'organizations' | 'subscriptions'>('modules');
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
-  const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
+  const [expandedModuleId, setExpandedModuleId] = useState<string | null>(null);
+  const [showModuleForm, setShowModuleForm] = useState(false);
+  const [editingModule, setEditingModule] = useState<SubscriptionModule | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState<string>('');
+  const [assignBillingCycle, setAssignBillingCycle] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [selectedModules, setSelectedModules] = useState<{ key: string; isEnabled: boolean }[]>([]);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewingTenantId, setViewingTenantId] = useState<string>('');
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updatingTenantId, setUpdatingTenantId] = useState<string>('');
+  const [updateModules, setUpdateModules] = useState<{ key: string; isEnabled: boolean }[]>([]);
 
   useEffect(() => {
-    const items = document.querySelectorAll('.subscription-item');
-    items.forEach((item, index) => {
-      (item as HTMLElement).style.animation = `fadeInSmooth 0.5s ease-out ${index * 0.1}s forwards`;
-      (item as HTMLElement).style.opacity = '0';
-    });
-  }, [billingCycle, expandedPlanId]);
+    dispatch(fetchSubscriptionModules());
+    dispatch(fetchOrganizations());
+    dispatch(fetchSubscribedTenants());
+  }, [dispatch]);
 
-  const handleEditPlan = (plan: Plan) => {
-    setEditingPlan(plan);
-    setShowAddForm(true);
-  };
-
-  const handleDeletePlan = (planId: string) => {
-    if (confirm('Are you sure you want to delete this plan?')) {
-      setPlans(plans.filter(p => p.id !== planId));
+  useEffect(() => {
+    if (actionSuccess) {
+      setShowModuleForm(false);
+      setShowAssignModal(false);
+      setShowUpdateModal(false);
+      setTimeout(() => {
+        dispatch(fetchSubscriptionModules());
+        dispatch(fetchSubscribedTenants());
+      }, 500);
     }
+  }, [actionSuccess, dispatch]);
+
+  const getPrice = (module: SubscriptionModule) => {
+    return billingCycle === 'monthly' ? module.monthlyPrice : module.yearlyPrice;
   };
 
-  const handleSavePlan = (planData: Partial<Plan>) => {
-    if (editingPlan) {
-      setPlans(plans.map(p => p.id === editingPlan.id ? { ...p, ...planData } : p));
-    } else {
-      const newPlan: Plan = {
-        id: planData.id || `plan-${Date.now()}`,
-        name: planData.name || 'New Plan',
-        price: planData.price || { monthly: 0, annual: 0 },
-        currency: planData.currency || 'USD',
-        employeeLimit: planData.employeeLimit || 10,
-        storageLimit: planData.storageLimit || 1,
-        modules: planData.modules || [],
-        isActive: planData.isActive !== undefined ? planData.isActive : true,
-      };
-      setPlans([...plans, newPlan]);
-    }
-    setShowAddForm(false);
-    setEditingPlan(null);
+  const handleEditModule = (module: SubscriptionModule) => {
+    setEditingModule(module);
+    setShowModuleForm(true);
   };
 
-  const toggleModule = (planId: string, moduleId: string) => {
-    setPlans(plans.map(plan => {
-      if (plan.id === planId) {
-        const hasModule = plan.modules.includes(moduleId);
-        return {
-          ...plan,
-          modules: hasModule
-            ? plan.modules.filter(m => m !== moduleId)
-            : [...plan.modules, moduleId],
-        };
-      }
-      return plan;
+  const handleSaveModule = (moduleData: Partial<SubscriptionModule>) => {
+    dispatch(upsertSubscriptionModule({
+      key: moduleData.key || '',
+      name: moduleData.name || '',
+      description: moduleData.description,
+      isActive: moduleData.isActive ?? true,
+      monthlyPrice: moduleData.monthlyPrice ?? 0,
+      yearlyPrice: moduleData.yearlyPrice ?? 0,
+    }));
+    setEditingModule(null);
+  };
+
+  const handleViewSubscription = (tenantId: string) => {
+    setViewingTenantId(tenantId);
+    dispatch(clearActiveSubscription());
+    setShowViewModal(true);
+  };
+
+  const handleAssignModules = async () => {
+    if (!selectedTenant || selectedModules.length === 0) return;
+    const today = new Date();
+    const endDate = new Date(today);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    // Transform modules to use moduleKey instead of key
+    const transformedModules = selectedModules.map(m => ({
+      moduleKey: m.key,
+      isEnabled: m.isEnabled,
+    }));
+
+    await dispatch(assignModulesToTenant({
+      tenantId: selectedTenant,
+      billingCycle: assignBillingCycle,
+      startDate: today.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      modules: transformedModules,
+    }));
+
+    setSelectedTenant('');
+    setSelectedModules([]);
+  };
+
+  const handleUpdateModules = async () => {
+    if (!updatingTenantId || updateModules.length === 0) return;
+    const transformedModules = updateModules.map(m => ({
+      moduleKey: m.key,
+      isEnabled: m.isEnabled,
+    }));
+    await dispatch(updateTenantModules({
+      tenantId: updatingTenantId,
+      modules: transformedModules,
     }));
   };
 
-  const togglePlanStatus = (planId: string) => {
-    setPlans(plans.map(plan =>
-      plan.id === planId ? { ...plan, isActive: !plan.isActive } : plan
-    ));
+  const handleCancelSubscription = async (tenantId: string, subscriptionId: string) => {
+    if (confirm('Are you sure you want to cancel this subscription?')) {
+      await dispatch(cancelSubscription({ tenantId, subscriptionId }));
+    }
   };
 
-  const getPrice = (plan: Plan) => {
-    return billingCycle === 'monthly' ? plan.price.monthly : plan.price.annual;
+  const handleOpenAssignModal = (tenantId?: string) => {
+    setSelectedTenant(tenantId || '');
+    setSelectedModules([]);
+    setAssignBillingCycle('MONTHLY');
+    setShowAssignModal(true);
+  };
+
+  const handleOpenUpdateModal = async (tenantId: string, currentModules: { key: string; name: string; isEnabled: boolean }[]) => {
+    setUpdatingTenantId(tenantId);
+    setUpdateModules(currentModules.map(m => ({ key: m.key, isEnabled: m.isEnabled })));
+    setShowUpdateModal(true);
+  };
+
+  const toggleModuleSelection = (key: string, isEnabled: boolean) => {
+    setSelectedModules(prev => {
+      const existing = prev.find(m => m.key === key);
+      if (existing) {
+        return prev.map(m => m.key === key ? { ...m, isEnabled } : m);
+      }
+      return [...prev, { key, isEnabled }];
+    });
+  };
+
+  const toggleUpdateModule = (key: string, isEnabled: boolean) => {
+    setUpdateModules(prev => {
+      const existing = prev.find(m => m.key === key);
+      if (existing) {
+        return prev.map(m => m.key === key ? { ...m, isEnabled } : m);
+      }
+      return [...prev, { key, isEnabled }];
+    });
   };
 
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 subscription-item">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold font-['Montserrat']">Subscription Setup</h1>
-          <p className="text-gray-600 mt-1">Configure subscription plans and modules</p>
+          <h1 className="text-3xl font-bold font-['Montserrat']">Subscription Management</h1>
+          <p className="text-gray-600 mt-1">Manage subscription modules and tenant assignments</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingPlan(null);
-            setShowAddForm(true);
-          }}
-          className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Add Plan
-        </button>
       </div>
 
-      {/* Billing Cycle Toggle */}
-      <div className="mb-8 subscription-item">
-        <div className="inline-flex items-center bg-gray-100 rounded-xl p-1">
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="flex gap-4 border-b-2 border-gray-200">
           <button
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
-              billingCycle === 'monthly'
-                ? 'bg-white text-[#0445AD] shadow-sm'
-                : 'text-gray-600 hover:text-[#0445AD]'
+            onClick={() => setActiveTab('modules')}
+            className={`px-6 py-3 font-semibold transition-all duration-300 ${
+              activeTab === 'modules'
+                ? 'text-[#0445AD] border-b-2 border-black'
+                : 'text-gray-500 hover:text-[#0445AD]'
             }`}
           >
-            Monthly
+            Modules ({subscriptionModules.length})
           </button>
           <button
-            onClick={() => setBillingCycle('annual')}
-            className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 relative ${
-              billingCycle === 'annual'
-                ? 'bg-white text-[#0445AD] shadow-sm'
-                : 'text-gray-600 hover:text-[#0445AD]'
+            onClick={() => setActiveTab('organizations')}
+            className={`px-6 py-3 font-semibold transition-all duration-300 ${
+              activeTab === 'organizations'
+                ? 'text-[#0445AD] border-b-2 border-black'
+                : 'text-gray-500 hover:text-[#0445AD]'
             }`}
           >
-            Annual
-            <span className="absolute -top-1 -right-1 bg-[#0445AD] text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
-              Save 20%
-            </span>
+            Organizations ({organizations.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('subscriptions')}
+            className={`px-6 py-3 font-semibold transition-all duration-300 ${
+              activeTab === 'subscriptions'
+                ? 'text-[#0445AD] border-b-2 border-black'
+                : 'text-gray-500 hover:text-[#0445AD]'
+            }`}
+          >
+            Subscriptions ({subscribedTenants.length})
           </button>
         </div>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {plans.map((plan) => (
-          <div key={plan.id} className="subscription-item">
-            <div className={`bg-white border-2 border-gray-100 rounded-xl overflow-hidden transition-all duration-300 ${
-              !plan.isActive ? 'opacity-50' : ''
-            }`}>
-              {/* Plan Header */}
-              <div className="p-6 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-xl font-bold font-['Montserrat']">{plan.name}</h3>
-                  <button
-                    onClick={() => togglePlanStatus(plan.id)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      plan.isActive ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
-                  />
-                </div>
-                <div className="mb-4">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold font-['Montserrat']">${getPrice(plan)}</span>
-                    <span className="text-gray-500 text-sm">
-                      /{billingCycle === 'monthly' ? 'month' : 'year'}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Employees:</span>
-                    <span className="font-semibold">{plan.employeeLimit === -1 ? 'Unlimited' : plan.employeeLimit}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Storage:</span>
-                    <span className="font-semibold">{plan.storageLimit === -1 ? 'Unlimited' : `${plan.storageLimit} GB`}</span>
-                  </div>
-                </div>
-              </div>
+      {/* Error/Success Messages */}
+      {actionError && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+          {actionError}
+        </div>
+      )}
+      {actionSuccess && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600">
+          {actionSuccess}
+        </div>
+      )}
 
-              {/* Modules */}
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-sm">Included Modules ({plan.modules.length})</h4>
-                  <button
-                    onClick={() => setExpandedPlanId(expandedPlanId === plan.id ? null : plan.id)}
-                    className="text-gray-400 hover:text-[#0445AD] transition-colors"
-                  >
-                    {expandedPlanId === plan.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                  </button>
-                </div>
+      {/* Modules Tab */}
+      {activeTab === 'modules' && (
+        <div>
+          {/* Billing Cycle Toggle */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="inline-flex items-center bg-gray-100 rounded-xl p-1">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                  billingCycle === 'monthly'
+                    ? 'bg-white text-[#0445AD] shadow-sm'
+                    : 'text-gray-600 hover:text-[#0445AD]'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-6 py-2 rounded-lg font-semibold transition-all duration-300 relative ${
+                  billingCycle === 'annual'
+                    ? 'bg-white text-[#0445AD] shadow-sm'
+                    : 'text-gray-600 hover:text-[#0445AD]'
+                }`}
+              >
+                Annual
+                <span className="absolute -top-1 -right-1 bg-[#0445AD] text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setEditingModule(null);
+                setShowModuleForm(true);
+              }}
+              className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Add Module
+            </button>
+          </div>
 
-                {expandedPlanId === plan.id ? (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {availableModules.map((module) => {
-                      const Icon = module.icon;
-                      const isIncluded = plan.modules.includes(module.id);
+          {/* Modules Grid */}
+          {modulesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+            </div>
+          ) : subscriptionModules.length === 0 ? (
+            <div className="text-center py-12">
+              <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No subscription modules found</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {subscriptionModules.map((module) => {
+                const Icon = moduleIcons[module.key] || Shield;
+                const isExpanded = expandedModuleId === module.key;
 
-                      return (
-                        <button
-                          key={module.id}
-                          onClick={() => toggleModule(plan.id, module.id)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                            isIncluded
-                              ? 'bg-[#0445AD] text-white border-black'
-                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="flex-1 text-left text-sm font-medium">
-                            {module.name}
-                          </span>
-                          {isIncluded && <Check className="w-4 h-4" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {plan.modules.slice(0, 4).map((moduleId) => {
-                      const module = availableModules.find(m => m.id === moduleId);
-                      if (!module) return null;
-                      const Icon = module.icon;
-                      return (
-                        <div key={moduleId} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg">
-                          <Icon className="w-3.5 h-3.5 text-gray-600" />
-                          <span className="text-xs text-gray-700">{module.name}</span>
+                return (
+                  <div key={module.key} className={`bg-white border-2 border-gray-100 rounded-xl overflow-hidden transition-all duration-300 ${
+                    !module.isActive ? 'opacity-50' : ''
+                  }`}>
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 bg-[#0445AD] rounded-lg flex items-center justify-center">
+                          <Icon className="w-6 h-6 text-white" />
                         </div>
-                      );
-                    })}
-                    {plan.modules.length > 4 && (
-                      <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-lg">
-                        <span className="text-xs text-gray-700">+{plan.modules.length - 4} more</span>
+                        <div className={`w-3 h-3 rounded-full ${module.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="p-6 pt-0 border-t border-gray-100">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditPlan(plan)}
-                    className="flex-1 px-4 py-2.5 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeletePlan(plan.id)}
-                    className="px-4 py-2.5 border-2 border-gray-200 text-gray-700 rounded-lg font-semibold hover:border-red-300 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Module Overview */}
-      <div className="mb-12 subscription-item">
-        <h2 className="text-2xl font-bold font-['Montserrat'] mb-6">Available Modules</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {availableModules.map((module) => {
-            const Icon = module.icon;
-            const plansWithModule = plans.filter(p => p.modules.includes(module.id)).length;
-
-            return (
-              <div key={module.id} className="p-5 bg-white border-2 border-gray-100 rounded-xl">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-3">
-                  <Icon className="w-5 h-5 text-gray-700" />
-                </div>
-                <h3 className="font-semibold mb-1">{module.name}</h3>
-                <p className="text-xs text-gray-500 mb-3">{module.description}</p>
-                <div className="text-xs text-gray-500">
-                  <span className="font-semibold text-[#0445AD]">{plansWithModule}</span> / {plans.length} plans
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Comparison Table */}
-      <div className="subscription-item">
-        <h2 className="text-2xl font-bold font-['Montserrat'] mb-6">Plan Comparison</h2>
-        <div className="bg-white border-2 border-gray-100 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b-2 border-gray-200">
-                  <th className="text-left py-4 px-6 font-semibold text-sm">Module</th>
-                  {plans.map((plan) => (
-                    <th key={plan.id} className="text-center py-4 px-6 font-semibold text-sm">
-                      {plan.name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {availableModules.map((module, index) => {
-                  const Icon = module.icon;
-                  return (
-                    <tr key={module.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                            <Icon className="w-4 h-4 text-gray-700" />
+                      <h3 className="text-lg font-bold font-['Montserrat'] mb-2">{module.name}</h3>
+                      <p className="text-xs text-gray-500 mb-4">{module.description || module.key}</p>
+                      <div className="mb-4">
+                        <span className="text-3xl font-bold font-['Montserrat']">${getPrice(module)}</span>
+                        <span className="text-gray-500 text-sm">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => setExpandedModuleId(isExpanded ? null : module.key)}
+                          className="text-sm text-[#0445AD] hover:underline flex items-center gap-1"
+                        >
+                          {isExpanded ? 'Hide Details' : 'View Details'}
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Monthly Price:</span>
+                            <span className="font-semibold">${module.monthlyPrice}</span>
                           </div>
-                          <div>
-                            <div className="font-semibold text-sm">{module.name}</div>
-                            <div className="text-xs text-gray-500">{module.description}</div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Yearly Price:</span>
+                            <span className="font-semibold">${module.yearlyPrice}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`font-semibold ${module.isActive ? 'text-green-600' : 'text-gray-400'}`}>
+                              {module.isActive ? 'Active' : 'Inactive'}
+                            </span>
                           </div>
                         </div>
-                      </td>
-                      {plans.map((plan) => {
-                        const isIncluded = plan.modules.includes(module.id);
-                        return (
-                          <td key={plan.id} className="text-center py-4 px-6">
-                            {isIncluded ? (
-                              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
-                                <Check className="w-3 h-3" />
-                                Included
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      )}
+                      <div className="flex gap-2 mt-4">
+                        <button
+                          onClick={() => handleEditModule(module)}
+                          className="flex-1 px-4 py-2 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Add/Edit Plan Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-[#0445AD]/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold font-['Montserrat']">
-                  {editingPlan ? 'Edit Plan' : 'Add New Plan'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setEditingPlan(null);
-                  }}
-                  className="text-gray-400 hover:text-[#0445AD] transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+      {/* Organizations Tab */}
+      {activeTab === 'organizations' && (
+        <div>
+          <div className="mb-6 flex justify-end">
+            <button
+              onClick={() => handleOpenAssignModal()}
+              className="px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-all duration-300 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Assign Modules
+            </button>
+          </div>
+
+          {orgLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+            </div>
+          ) : (
+            <div className="bg-white border-2 border-gray-100 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Organization</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Users</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {organizations.map((org) => (
+                      <tr key={org.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                              {(org.companyName || org.tenantName || 'CO').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-semibold">{org.companyName || org.tenantName}</p>
+                              <p className="text-xs text-gray-500">{org.city}, {org.state}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            org.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                            org.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {org.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-semibold">{org.usersCount || 0}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleViewSubscription(org.id)}
+                              className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600 flex items-center gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleOpenAssignModal(org.id)}
+                              className="px-3 py-1.5 bg-[#0445AD] text-white rounded text-xs font-semibold hover:bg-gray-800 flex items-center gap-1"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Assign
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-              <PlanForm
-                plan={editingPlan}
-                availableModules={availableModules}
-                onSave={handleSavePlan}
-                onCancel={() => {
-                  setShowAddForm(false);
-                  setEditingPlan(null);
-                }}
-              />
-            </div>
-          </div>
+          )}
         </div>
+      )}
+
+      {/* Subscriptions Tab */}
+      {activeTab === 'subscriptions' && (
+        <div>
+          {subscriptionLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0445AD]"></div>
+            </div>
+          ) : subscribedTenants.length === 0 ? (
+            <div className="text-center py-12">
+              <HandCoins className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No active subscriptions</p>
+            </div>
+          ) : (
+            <div className="bg-white border-2 border-gray-100 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b-2 border-gray-200">
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Organization</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Billing Cycle</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Start Date</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">End Date</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Modules</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Status</th>
+                      <th className="text-left py-4 px-6 font-semibold text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscribedTenants.map((sub) => (
+                      <tr key={sub.subscriptionId} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#0445AD] rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                              {(sub.tenantName || 'CO').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-semibold">{sub.tenantName}</p>
+                              <p className="text-xs text-gray-500">{sub.companyName}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="font-semibold">{sub.billingCycle}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-sm">{sub.startDate ? new Date(sub.startDate).toLocaleDateString() : '—'}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-sm">{sub.endDate ? new Date(sub.endDate).toLocaleDateString() : '—'}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="text-sm">{sub.enabledModules} / {sub.totalModules} enabled</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            sub.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {sub.isActive ? 'Active' : 'Cancelled'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleViewSubscription(sub.tenantId)}
+                              className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs font-semibold hover:bg-blue-600 flex items-center gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </button>
+                            {sub.isActive && (
+                              <button
+                                onClick={() => handleOpenUpdateModal(sub.tenantId, [])}
+                                className="px-3 py-1.5 bg-[#0445AD] text-white rounded text-xs font-semibold hover:bg-gray-800 flex items-center gap-1"
+                              >
+                                <Edit className="w-4 h-4" />
+                                Update
+                              </button>
+                            )}
+                            {sub.isActive && (
+                              <button
+                                onClick={() => handleCancelSubscription(sub.tenantId, sub.subscriptionId)}
+                                className="px-3 py-1.5 bg-red-500 text-white rounded text-xs font-semibold hover:bg-red-600 flex items-center gap-1"
+                              >
+                                <X className="w-4 h-4" />
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Module Form Modal */}
+      {showModuleForm && (
+        <ModuleFormModal
+          module={editingModule}
+          onSave={handleSaveModule}
+          onClose={() => {
+            setShowModuleForm(false);
+            setEditingModule(null);
+          }}
+          loading={actionLoading}
+        />
+      )}
+
+      {/* Assign Modules Modal */}
+      {showAssignModal && (
+        <AssignModulesModal
+          organizations={organizations}
+          modules={subscriptionModules}
+          selectedTenant={selectedTenant}
+          setSelectedTenant={setSelectedTenant}
+          billingCycle={assignBillingCycle}
+          setBillingCycle={setAssignBillingCycle}
+          selectedModules={selectedModules}
+          toggleModule={toggleModuleSelection}
+          onSave={handleAssignModules}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedTenant('');
+            setSelectedModules([]);
+          }}
+          loading={actionLoading}
+        />
+      )}
+
+      {/* View Subscription Modal */}
+      {showViewModal && (
+        <ViewSubscriptionModal
+          tenantId={viewingTenantId}
+          onClose={() => {
+            setShowViewModal(false);
+            dispatch(clearActiveSubscription());
+          }}
+        />
+      )}
+
+      {/* Update Modules Modal */}
+      {showUpdateModal && (
+        <UpdateModulesModal
+          modules={subscriptionModules}
+          tenantId={updatingTenantId}
+          updateModules={updateModules}
+          setUpdateModules={setUpdateModules}
+          toggleModule={toggleUpdateModule}
+          onSave={handleUpdateModules}
+          onClose={() => {
+            setShowUpdateModal(false);
+            setUpdatingTenantId('');
+            setUpdateModules([]);
+          }}
+          loading={actionLoading}
+        />
       )}
     </div>
   );
 }
 
-function PlanForm({
-  plan,
-  availableModules,
+// Module Form Modal Component
+function ModuleFormModal({
+  module,
   onSave,
-  onCancel,
+  onClose,
+  loading,
 }: {
-  plan: Plan | null;
-  availableModules: Module[];
-  onSave: (plan: Partial<Plan>) => void;
-  onCancel: () => void;
+  module: SubscriptionModule | null;
+  onSave: (data: Partial<SubscriptionModule>) => void;
+  onClose: () => void;
+  loading: boolean;
 }) {
   const [formData, setFormData] = useState({
-    id: plan?.id || '',
-    name: plan?.name || '',
-    price: plan?.price || { monthly: 0, annual: 0 },
-    currency: plan?.currency || 'USD',
-    employeeLimit: plan?.employeeLimit || 10,
-    storageLimit: plan?.storageLimit || 1,
-    modules: plan?.modules || [],
-    isActive: plan?.isActive !== undefined ? plan.isActive : true,
+    key: module?.key || '',
+    name: module?.name || '',
+    description: module?.description || '',
+    isActive: module?.isActive ?? true,
+    monthlyPrice: module?.monthlyPrice ?? 0,
+    yearlyPrice: module?.yearlyPrice ?? 0,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -481,160 +639,466 @@ function PlanForm({
     onSave(formData);
   };
 
-  const toggleModule = (moduleId: string) => {
-    setFormData({
-      ...formData,
-      modules: formData.modules.includes(moduleId)
-        ? formData.modules.filter(m => m !== moduleId)
-        : [...formData.modules, moduleId],
-    });
-  };
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold font-['Montserrat']">
+              {module ? 'Edit Module' : 'Add New Module'}
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-[#0445AD]">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-150px)]">
+          <div>
+            <label className="block text-sm font-semibold mb-2">Module Key</label>
+            <input
+              type="text"
+              value={formData.key}
+              onChange={(e) => setFormData({ ...formData, key: e.target.value.toUpperCase() })}
+              disabled={!!module}
+              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black disabled:opacity-50"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">Module Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+              rows={3}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold mb-2">Monthly Price ($)</label>
+              <input
+                type="number"
+                value={formData.monthlyPrice}
+                onChange={(e) => setFormData({ ...formData, monthlyPrice: Number(e.target.value) })}
+                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2">Yearly Price ($)</label>
+              <input
+                type="number"
+                value={formData.yearlyPrice}
+                onChange={(e) => setFormData({ ...formData, yearlyPrice: Number(e.target.value) })}
+                className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-semibold">Module Status</p>
+              <p className="text-sm text-gray-500">Enable or disable this module</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
+              className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+                formData.isActive ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'
+              }`}
+            >
+              {formData.isActive ? 'Active' : 'Inactive'}
+            </button>
+          </div>
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-5 h-5" />
+              {loading ? 'Saving...' : 'Save Module'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Assign Modules Modal Component
+function AssignModulesModal({
+  organizations,
+  modules,
+  selectedTenant,
+  setSelectedTenant,
+  billingCycle,
+  setBillingCycle,
+  selectedModules,
+  toggleModule,
+  onSave,
+  onClose,
+  loading,
+}: {
+  organizations: any[];
+  modules: SubscriptionModule[];
+  selectedTenant: string;
+  setSelectedTenant: (v: string) => void;
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  setBillingCycle: (v: 'MONTHLY' | 'YEARLY') => void;
+  selectedModules: { key: string; isEnabled: boolean }[];
+  toggleModule: (key: string, isEnabled: boolean) => void;
+  onSave: () => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  const selectedOrg = organizations.find(o => o.id === selectedTenant);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2">Plan Name</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            required
-          />
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold font-['Montserrat']">Assign Modules</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-[#0445AD]">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2">Currency</label>
-          <select
-            value={formData.currency}
-            onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-          >
-            <option value="USD">USD ($)</option>
-            <option value="EUR">EUR (€)</option>
-            <option value="GBP">GBP (£)</option>
-            <option value="INR">INR (₹)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2">Monthly Price ($)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.price.monthly}
-            onChange={(e) => setFormData({
-              ...formData,
-              price: { ...formData.price, monthly: Number(e.target.value) }
-            })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2">Annual Price ($)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={formData.price.annual}
-            onChange={(e) => setFormData({
-              ...formData,
-              price: { ...formData.price, annual: Number(e.target.value) }
-            })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2">Employee Limit</label>
-          <input
-            type="number"
-            value={formData.employeeLimit}
-            onChange={(e) => setFormData({ ...formData, employeeLimit: Number(e.target.value) })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">Enter -1 for unlimited</p>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2">Storage Limit (GB)</label>
-          <input
-            type="number"
-            value={formData.storageLimit}
-            onChange={(e) => setFormData({ ...formData, storageLimit: Number(e.target.value) })}
-            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
-            required
-          />
-          <p className="text-xs text-gray-500 mt-1">Enter -1 for unlimited</p>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-semibold mb-4">Included Modules</label>
-        <div className="grid grid-cols-2 gap-3">
-          {availableModules.map((module) => {
-            const Icon = module.icon;
-            const isSelected = formData.modules.includes(module.id);
-
-            return (
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-150px)]">
+          <div>
+            <label className="block text-sm font-semibold mb-2">Select Organization</label>
+            <select
+              value={selectedTenant}
+              onChange={(e) => setSelectedTenant(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-black"
+            >
+              <option value="">Select an organization...</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.companyName || org.tenantName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">Billing Cycle</label>
+            <div className="flex gap-4">
               <button
-                key={module.id}
                 type="button"
-                onClick={() => toggleModule(module.id)}
-                className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                  isSelected
-                    ? 'bg-[#0445AD] text-white border-black'
-                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
+                onClick={() => setBillingCycle('MONTHLY')}
+                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                  billingCycle === 'MONTHLY' ? 'bg-[#0445AD] text-white' : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                <span className="flex-1 text-sm font-medium">{module.name}</span>
-                {isSelected && <Check className="w-5 h-5" />}
+                Monthly
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={() => setBillingCycle('YEARLY')}
+                className={`flex-1 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                  billingCycle === 'YEARLY' ? 'bg-[#0445AD] text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-2">Select Modules</label>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {modules.map((mod) => (
+                <label
+                  key={mod.key}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedModules.some(m => m.key === mod.key && m.isEnabled)}
+                    onChange={(e) => toggleModule(mod.key, e.target.checked)}
+                    className="w-5 h-5 accent-[#0445AD]"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold">{mod.name}</p>
+                    <p className="text-xs text-gray-500">${billingCycle === 'MONTHLY' ? mod.monthlyPrice : mod.yearlyPrice}/{billingCycle === 'MONTHLY' ? 'mo' : 'yr'}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={onSave}
+              disabled={loading || !selectedTenant || selectedModules.length === 0}
+              className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-5 h-5" />
+              {loading ? 'Assigning...' : 'Assign Modules'}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-        <div>
-          <p className="font-semibold">Plan Status</p>
-          <p className="text-sm text-gray-500">Enable or disable this plan</p>
+// View Subscription Modal Component
+function ViewSubscriptionModal({
+  tenantId,
+  onClose,
+}: {
+  tenantId: string;
+  onClose: () => void;
+}) {
+  const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState(true);
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/platform/subscription/active-subscription/${tenantId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('token') : ''}`,
+          },
+        });
+        const response = await res.json();
+        if (response.status) {
+          setSubscriptionData(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch subscription');
+        }
+      } catch (err) {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [tenantId]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-12">
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0445AD] mb-4"></div>
+            <p className="text-gray-500">Loading subscription details...</p>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-          className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-            formData.isActive
-              ? 'bg-green-500 text-white'
-              : 'bg-gray-300 text-gray-700'
-          }`}
-        >
-          {formData.isActive ? 'Active' : 'Inactive'}
-        </button>
       </div>
+    );
+  }
 
-      <div className="flex gap-4 pt-4 border-t border-gray-200">
-        <button
-          type="submit"
-          className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-        >
-          <Save className="w-5 h-5" />
-          {plan ? 'Update Plan' : 'Create Plan'}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-        >
-          Cancel
-        </button>
+  if (error || !subscriptionData) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-12">
+          <div className="flex flex-col items-center justify-center">
+            <Shield className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-gray-500">{error || 'No subscription details found'}</p>
+            <button
+              onClick={onClose}
+              className="mt-4 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       </div>
-    </form>
+    );
+  }
+
+  const subscription = subscriptionData;
+  const hasModules = subscription.hasSubscriptions && subscription.modules?.length > 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold font-['Montserrat']">
+              {subscription.hasSubscriptions ? 'Active Subscription' : 'No Subscription'}
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-[#0445AD]">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-150px)]">
+          {!subscription.hasSubscriptions ? (
+            <div className="text-center py-8">
+              <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">This organization has no active subscription</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Status</p>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    subscription.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {subscription.status}
+                  </span>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Billing Cycle</p>
+                  <p className="font-semibold">{subscription.subscription?.billingCycle || '—'}</p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">Start Date</p>
+                  <p className="font-semibold">
+                    {subscription.subscription?.startDate
+                      ? new Date(subscription.subscription.startDate).toLocaleDateString()
+                      : '—'}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500 mb-1">End Date</p>
+                  <p className="font-semibold">
+                    {subscription.subscription?.endDate
+                      ? new Date(subscription.subscription.endDate).toLocaleDateString()
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold mb-2">Subscribed Modules ({subscription.modules?.length || 0})</p>
+                <div className="space-y-2">
+                  {subscription.modules?.map((modItem: any) => (
+                    <div key={modItem.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <span className="font-medium">{modItem.module?.name || modItem.module?.key}</span>
+                        <p className="text-xs text-gray-500">{modItem.module?.description}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          modItem.isEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {modItem.isEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        {modItem.isEnabled && modItem.monthlyPrice > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">${modItem.monthlyPrice}/mo</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Update Modules Modal Component
+function UpdateModulesModal({
+  modules,
+  tenantId,
+  updateModules,
+  setUpdateModules,
+  toggleModule,
+  onSave,
+  onClose,
+  loading,
+}: {
+  modules: SubscriptionModule[];
+  tenantId: string;
+  updateModules: { key: string; isEnabled: boolean }[];
+  setUpdateModules: React.Dispatch<React.SetStateAction<{ key: string; isEnabled: boolean }[]>>;
+  toggleModule: (key: string, isEnabled: boolean) => void;
+  onSave: () => void;
+  onClose: () => void;
+  loading: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold font-['Montserrat']">Update Modules</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-[#0445AD]">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-150px)]">
+          <div>
+            <label className="block text-sm font-semibold mb-2">Select Modules to Enable/Disable</label>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {modules.map((mod) => (
+                <label
+                  key={mod.key}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                >
+                  <input
+                    type="checkbox"
+                    checked={updateModules.some(m => m.key === mod.key && m.isEnabled)}
+                    onChange={(e) => toggleModule(mod.key, e.target.checked)}
+                    className="w-5 h-5 accent-[#0445AD]"
+                  />
+                  <div className="flex-1">
+                    <p className="font-semibold">{mod.name}</p>
+                    <p className="text-xs text-gray-500">{mod.key}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={onSave}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-[#0445AD] text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Save className="w-5 h-5" />
+              {loading ? 'Updating...' : 'Update Modules'}
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

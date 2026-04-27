@@ -47,11 +47,11 @@ const COMPANY_NAV: NavItem[] = [
 ];
 
 const SUPER_ADMIN_NAV: NavItem[] = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/companies', label: 'Companies', icon: Building },
   { href: '/admin/users', label: 'All Users', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/settings', label: 'System Settings', icon: Shield },
+  // { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  // { href: '/admin/settings', label: 'System Settings', icon: Shield },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: TrendingUp },
 ];
 
