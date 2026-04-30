@@ -19,7 +19,7 @@ const CoreFeatures = () => {
     ];
 
   return (
-   <section className="bg-white py-20">
+   <section id="features" className="bg-white py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 items-center lg:grid-cols-[0.95fr_1.05fr] xl:gap-16">
           <div>

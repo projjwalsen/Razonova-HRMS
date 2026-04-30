@@ -428,7 +428,8 @@ export default function AttendanceTabs({
       <div className="attendance-item">
         <div className="p-8 bg-white rounded-xl border-2 border-gray-100 text-center">
           <Clock className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Regularization requests will appear here</p>
+          <p className="text-gray-500 font-medium">Employee regularization requests</p>
+          <p className="text-xs text-gray-400 mt-1">Use the "Regularization Admin" tab to manage policies and approvals</p>
         </div>
       </div>
     );

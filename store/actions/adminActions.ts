@@ -21,6 +21,22 @@ export interface DashboardKPIs {
   pendingCompanies: number;
 }
 
+export interface CompanyDashboardKPIs {
+  totalEmployees?: number;
+  totalDepartments?: number;
+  attendanceToday?: {
+    present: number;
+    absent: number;
+    onLeave: number;
+  };
+  pendingApprovals?: {
+    leaves: number;
+    regularization: number;
+    resignation: number;
+    total: number;
+  };
+}
+
 export interface Organization {
   id: string;
   tenantName?: string;
@@ -188,7 +204,7 @@ export interface SubscribedTenant {
 
 // =============================================
 // DASHBOARD KPIs
-// GET /admin/dashboard/kpis
+// GET /platform/dashboard/kpis — platform-level KPIs (for admin dashboard)
 // =============================================
 
 export const fetchDashboardKPIs = createAsyncThunk<DashboardKPIs, void, { rejectValue: string }>(
@@ -198,6 +214,25 @@ export const fetchDashboardKPIs = createAsyncThunk<DashboardKPIs, void, { reject
       const res = await fetch(`${BASE}/platform/dashboard/kpis`, { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) return rejectWithValue(data.message || "Failed to fetch dashboard KPIs");
+      return data.data;
+    } catch {
+      return rejectWithValue("Network error");
+    }
+  }
+);
+
+// =============================================
+// COMPANY DASHBOARD KPIs
+// GET /org/dashboard/kpis — company-level KPIs (for company dashboard)
+// =============================================
+
+export const fetchCompanyDashboardKPIs = createAsyncThunk<CompanyDashboardKPIs, void, { rejectValue: string }>(
+  "admin/fetchCompanyDashboardKPIs",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await fetch(`${BASE}/org/dashboard/kpis`, { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) return rejectWithValue(data.message || "Failed to fetch company dashboard KPIs");
       return data.data;
     } catch {
       return rejectWithValue("Network error");

@@ -34,11 +34,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const sidebarWidth = collapsed ? 'ml-18' : 'ml-64';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-full min-h-screen bg-gray-50">
       {/* Top Header - always visible on authed pages */}
       {!hideSidebar && <Header />}
 
-      <div className="flex">
+      <div className="w-full ">
         {!hideSidebar && (
           <Sidebar
             collapsed={collapsed}

@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Play } from 'lucide-react';
 const Hero = () => {
   return (
-    <section className='w-full bg-white font-poppins'>
+    <section id="home" className='w-full bg-white font-poppins'>
       <div className='mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:gap-16 lg:px-8'>
         <div className='flex w-full flex-col justify-center text-center lg:text-left lg:max-w-2xl'>
           <span className='text-[#7C5CFC] font-semibold text-base uppercase tracking-[0.12em] font-montserrat'>Recruit - Onboard - Manage</span>

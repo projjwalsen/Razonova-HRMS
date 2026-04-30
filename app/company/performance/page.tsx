@@ -109,7 +109,7 @@ export default function PerformancePage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="w-full p-8">
       <div ref={contentRef}>
         {/* Header */}
         <div className="mb-8 performance-item">

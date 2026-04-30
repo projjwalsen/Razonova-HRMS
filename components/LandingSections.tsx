@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { submitContactQuery } from "@/store/actions/contactActions";
 import {
   Menu,
   X,
@@ -36,92 +38,84 @@ import {
   RefreshCw,
   CheckCircle2,
   ChevronUp,
+  Send,
 } from "lucide-react";
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const navLinks = [
-    { label: "Features", dropdown: ["Employee Management", "Attendance", "Leave", "Payroll", "Performance", "Reports"] },
-    { label: "Modules", dropdown: ["HR Module", "Recruitment", "Time Tracking", "Payroll Suite", "Analytics"] },
-    { label: "AI Features", dropdown: ["AI Setup Wizard", "AI Payroll Assistant", "AI Attendance", "AI Recruitment", "Predictive Analytics"] },
-    { label: "About", href: "#about" },
+    { label: "Features", href: "#features" },
+    { label: "Modules", href: "#modules" },
+    { label: "AI Features", href: "#ai-features" },
+    { label: "Integrations", href: "#integrations" },
+    { label: "Security", href: "#security" },
+    { label: "FAQ", href: "#faq" },
+    { label: "Contact Us", href: "#contact" },
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
-      <div className="max-w-7xl mx-auto px-6">
+    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md border border-gray-100 shadow-lg rounded-2xl w-[calc(100%-2rem)] max-w-5xl mx-auto">
+      <div className="max-w-fit mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
+          <a href="#home" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[#0445AD] rounded-lg flex items-center justify-center">
               <Layers className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900">HRAutomata</span>
-          </div>
+          </a>
 
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden xl:flex items-center gap-1">
             {navLinks.map((link) => (
-              <div key={link.label} className="relative">
-                {link.href ? (
-                  <a href={link.href} className="px-3 py-2 text-sm text-gray-600 hover:text-[#0445AD] font-medium rounded-lg hover:bg-gray-50 transition">
-                    {link.label}
-                  </a>
-                ) : (
-                  <button
-                    onMouseEnter={() => setActiveDropdown(link.label)}
-                    onMouseLeave={() => setActiveDropdown(null)}
-                    className="px-3 py-2 text-sm text-gray-600 hover:text-[#0445AD] font-medium rounded-lg hover:bg-gray-50 transition flex items-center gap-1"
-                  >
-                    {link.label}
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                {link.dropdown && activeDropdown === link.label && (
-                  <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-100 rounded-xl shadow-lg py-2 animate-fade-in">
-                    {link.dropdown.map((item) => (
-                      <a key={item} href="#" className="block px-4 py-2 text-sm text-gray-600 hover:text-[#0445AD] hover:bg-gray-50 transition">
-                        {item}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <a
+                key={link.label}
+                href={link.href}
+                className="px-3 py-2 text-sm text-nowrap text-gray-600 hover:text-[#0445AD] font-medium rounded-lg hover:bg-gray-50 transition"
+              >
+                {link.label}
+              </a>
             ))}
           </div>
 
-          <Link href="/login" className="hidden lg:flex items-center gap-3">
-            <button className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-[#0445AD] transition">Login</button>
-            <button className="px-4 py-2 text-sm font-medium text-[#0445AD] border border-[#0445AD]/20 rounded-lg hover:bg-[#0445AD]/5 transition">
-              Book Demo
-            </button>
-            <button className="px-4 py-2 text-sm font-semibold text-white bg-[#0445AD] rounded-lg hover:bg-[#033591] transition shadow-sm shadow-[#0445AD]/20">
-              Get Started
-            </button>
-          </Link>
+          <div className="hidden xl:flex items-center gap-3">
+            <a href="#contact">
+              <button className="px-4 py-2 text-sm font-medium text-[#0445AD] border border-[#0445AD]/20 rounded-lg hover:bg-[#0445AD]/5 transition">
+                Book Demo
+              </button>
+            </a>
+          </div>
 
-          <button onClick={() => setOpen(!open)} className="lg:hidden p-2 text-gray-600">
+          <button onClick={() => setOpen(!open)} className="xl:hidden p-2 text-gray-600">
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="lg:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1">
+        <div className="xl:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1">
           {navLinks.map((link) => (
-            <a key={link.label} href={link.href || "#"} className="block px-4 py-3 text-sm text-gray-700 hover:text-[#0445AD] hover:bg-gray-50 rounded-lg transition">
+            <a
+              key={link.label}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className="block px-4 py-3 text-sm text-gray-700 hover:text-[#0445AD] hover:bg-gray-50 rounded-lg transition"
+            >
               {link.label}
             </a>
           ))}
-          <div className="pt-4 flex flex-col gap-2">
-            <button className="w-full px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg">Login</button>
-            <button className="w-full px-4 py-2 text-sm font-semibold text-white bg-[#0445AD] rounded-lg">Get Started Free</button>
+          <div className="pt-4">
+            <a href="#contact" onClick={() => setOpen(false)}>
+              <button className="w-full px-4 py-2 text-sm font-semibold text-white bg-[#0445AD] rounded-lg">
+                Book Demo
+              </button>
+            </a>
           </div>
         </div>
       )}
     </nav>
   );
 }
+
 
 export function AIFeatures() {
   const aiFeatures = [
@@ -134,7 +128,7 @@ export function AIFeatures() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section id="ai-features" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-14 items-center">
           <div>
@@ -245,7 +239,7 @@ export function ModuleDetails() {
   const active = modules.find((m) => m.id === openModule) || modules[0];
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section id="module-details" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Deep Dive</p>
@@ -347,7 +341,7 @@ export function RoleBased() {
   const activeRoleData = roles[activeRole];
 
   return (
-    <section className="py-20 bg-white">
+    <section id="roles" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Role-Based Access</p>
@@ -405,7 +399,7 @@ export function Integrations() {
   ];
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section id="integrations" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Integrations</p>
@@ -437,7 +431,7 @@ export function SecurityCompliance() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section id="security" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-14 items-center">
           <div>
@@ -487,7 +481,7 @@ export function SaaSBenefits() {
   ];
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section id="benefits" className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {benefits.map((b) => (
@@ -531,7 +525,7 @@ export function Testimonials() {
   ];
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section id="testimonials" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Testimonials</p>
@@ -575,7 +569,7 @@ export function FAQ() {
   ];
 
   return (
-    <section className="py-20 bg-white">
+    <section id="faq" className="py-20 bg-white">
       <div className="max-w-3xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">FAQ</p>
@@ -602,7 +596,7 @@ export function FAQ() {
 
 export function FinalCTA() {
   return (
-    <section className="py-20 bg-[#0445AD]">
+    <section id="get-started" className="py-20 bg-[#0445AD]">
       <div className="max-w-4xl mx-auto px-6 text-center">
         <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
           Ready to Transform Your HR Operations?
@@ -685,6 +679,128 @@ export function Footer() {
         </div>
       </div>
     </footer>
+  );
+}
+
+export function ContactSection() {
+  const dispatch = useAppDispatch();
+  const { submitting } = useAppSelector((s) => s.contact ?? { submitting: false });
+  const [form, setForm] = useState({ email: "", phone: "", companyName: "", query: "" });
+  const [formError, setFormError] = useState("");
+  const [formSuccess, setFormSuccess] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+    if (!form.email.trim()) { setFormError("Email is required"); return; }
+    if (!form.phone.trim()) { setFormError("Phone is required"); return; }
+    if (!form.companyName.trim()) { setFormError("Company name is required"); return; }
+    if (!form.query.trim()) { setFormError("Query is required"); return; }
+
+    const result = await dispatch(submitContactQuery({ ...form }));
+    if (submitContactQuery.fulfilled.match(result)) {
+      setFormSuccess("Thank you! We'll get back to you shortly.");
+      setForm({ email: "", phone: "", companyName: "", query: "" });
+      setTimeout(() => setFormSuccess(""), 3000);
+    } else {
+      setFormError("Failed to submit. Please try again.");
+    }
+  };
+
+  return (
+    <section id="contact" className="py-20 bg-gray-50">
+      <div className="max-w-5xl mx-auto px-6">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left - copy */}
+          <div>
+            <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Get In Touch</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Book a Demo or Get a Free Quote
+            </h2>
+            <p className="text-gray-500 leading-relaxed mb-8">
+              See HRAutomata in action. Our team will reach out within 24 hours to schedule a personalized demo or provide pricing tailored to your team size.
+            </p>
+            <div className="space-y-4">
+              {[
+                { icon: Zap, title: "Quick Response", desc: "We'll contact you within 24 hours" },
+                { icon: Users, title: "Personalized Demo", desc: "Customized to your industry and team size" },
+                { icon: Shield, title: "No Commitment", desc: "Free consultation with no strings attached" },
+              ].map((item) => (
+                <div key={item.title} className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-[#0445AD]/10 rounded-xl flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-[#0445AD]" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-800">{item.title}</h4>
+                    <p className="text-xs text-gray-400">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right - form */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-6">
+            <h3 className="text-base font-bold text-gray-900 mb-5">Send us a message</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Work Email *</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="you@company.com"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number *</label>
+                <input
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Company Name *</label>
+                <input
+                  type="text"
+                  value={form.companyName}
+                  onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                  placeholder="Acme Pvt Ltd"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#0445AD]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">How can we help? *</label>
+                <textarea
+                  value={form.query}
+                  onChange={(e) => setForm({ ...form, query: e.target.value })}
+                  rows={3}
+                  placeholder="Tell us about your requirements..."
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:border-[#0445AD]"
+                />
+              </div>
+              {formError && <p className="text-sm text-red-500">{formError}</p>}
+              {formSuccess && <p className="text-sm text-green-600 font-medium">{formSuccess}</p>}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-2.5 bg-[#0445AD] text-white font-semibold rounded-lg hover:bg-[#033591] transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submitting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <><Send className="w-4 h-4" /> Send Message</>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

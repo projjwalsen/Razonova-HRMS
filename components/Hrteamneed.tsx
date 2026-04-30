@@ -13,7 +13,7 @@ export default function Hrteam() {
   ];
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section id="modules" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center mb-14">
           <p className="text-xs font-semibold text-[#0445AD] uppercase tracking-widest mb-2">Modules</p>

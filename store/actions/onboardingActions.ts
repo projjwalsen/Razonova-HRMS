@@ -38,6 +38,7 @@ export interface EmployeePayload {
   employeeCode?: string;
   joiningDate?: string;
   proposedSalary?: number;
+  sourceOfHire?: string;
 }
 
 export interface OnboardingState {

@@ -12,6 +12,8 @@ import {
   LogOut,
   Menu,
   LayoutGrid,
+  Rss,
+  User,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAppSelector } from '@/store/hooks';
@@ -24,9 +26,12 @@ interface SidebarUser {
 
 const navItems = [
   { href: '/employee', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { href: '/employee/feed', label: 'Company Updates', icon: Rss },
   { href: '/employee/leave', label: 'My Leave', icon: CalendarCheck },
   { href: '/employee/attendance', label: 'My Attendance', icon: Clock },
+  { href: '/employee/resignation', label: 'Resignation', icon: LogOut },
   { href: '/employee/payroll', label: 'Payroll', icon: HandCoins },
+  { href: '/employee/profile', label: 'My Profile', icon: User },
   { href: '#', label: 'Documents', icon: FileText, disabled: true },
 ];
 
