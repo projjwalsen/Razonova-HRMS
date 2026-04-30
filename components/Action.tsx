@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 
 const Action = () => {
   return (
-    <section className="w-full bg-white px-4 py-8 sm:px-6 lg:px-8">
+    <section id="demo" className="w-full bg-white px-4 py-8 sm:px-6 lg:px-8">
       <div className="relative mx-auto max-w-6xl overflow-hidden rounded-2xl text-white shadow-[0_40px_120px_rgba(0,0,0,0.25)] ring-1 ring-white/10 min-h-[420px] sm:min-h-[520px] lg:min-h-[640px]">
         <div
           className="absolute inset-0 bg-cover bg-center bg-black/40 backdrop-blur-2xl shadow-black/55"

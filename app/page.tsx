@@ -7,6 +7,8 @@ import Action from "@/components/Action";
 import CoreFeatures from "@/components/CoreFeatures";
 import Hrteam from "@/components/Hrteamneed";
 import {
+  Navbar,
+  ContactSection,
   AIFeatures,
   ModuleDetails,
   RoleBased,
@@ -25,11 +27,11 @@ import {
 export default function LandingPage() {
   return (
     <div className="font-sans antialiased">
-      {/* <Navbar /> */}
-      <main>
+      <Navbar />
+      <main className="">
         <Hero/>
         <LogoCarousel />
-        <Action/>
+        {/* <Action/> */}
         <CoreFeatures />
         <Hrteam/>
         <AIFeatures />
@@ -38,10 +40,11 @@ export default function LandingPage() {
         <Integrations />
         <SecurityCompliance />
         <SaaSBenefits />
-        {/* <Pricing /> */}
+        
         <Testimonials />
         <FAQ />
-        <FinalCTA />
+        <ContactSection />
+        {/* <FinalCTA /> */}
       </main>
       <Footer />
 

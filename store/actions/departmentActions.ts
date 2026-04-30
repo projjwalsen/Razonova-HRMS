@@ -31,10 +31,9 @@ const initialState: DepartmentState = {
 
 export const fetchDepartments = createAsyncThunk<Department[], void>(
   "departments/fetchAll",
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string | null } };
-      const token = state.auth.token;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/departments`,
@@ -62,10 +61,9 @@ export const fetchDepartments = createAsyncThunk<Department[], void>(
 
 export const createDepartment = createAsyncThunk<Department, { name: string }>(
   "departments/create",
-  async (payload, { rejectWithValue, getState }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string | null } };
-      const token = state.auth.token;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/department/create`,
@@ -94,10 +92,9 @@ export const createDepartment = createAsyncThunk<Department, { name: string }>(
 
 export const updateDepartment = createAsyncThunk<Department, { id: string; name: string }>(
   "departments/update",
-  async (payload, { rejectWithValue, getState }) => {
+  async (payload, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string | null } };
-      const token = state.auth.token;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/department/update/${payload.id}`,
@@ -126,10 +123,9 @@ export const updateDepartment = createAsyncThunk<Department, { id: string; name:
 
 export const deleteDepartment = createAsyncThunk<string, string>(
   "departments/delete",
-  async (id, { rejectWithValue, getState }) => {
+  async (id, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string | null } };
-      const token = state.auth.token;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/department/delete/${id}`,

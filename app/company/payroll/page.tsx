@@ -130,7 +130,7 @@ const ConfirmModal = ({
 }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4">
         <div className="p-6">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
@@ -343,7 +343,7 @@ const PayStructureModal = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
           <h2 className="text-lg font-bold">{editing ? 'Edit Pay Structure' : 'Add Pay Structure'}</h2>
@@ -514,7 +514,7 @@ const ProcessPayrollModal = ({
 
   if (!open || !record) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
           <div>
@@ -597,7 +597,7 @@ const AdjustUserModal = ({
 
   if (!open || !record) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
@@ -690,7 +690,7 @@ const GeneratePayrollModal = ({ open, onClose, onGenerate, loading }: {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
@@ -765,7 +765,7 @@ const PayrollDetailModal = ({ open, record, onClose, onAction, hasPermission }: 
   const days = record.daysSummary;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
           <div>
@@ -1122,7 +1122,7 @@ export default function PayrollPage() {
 
   if (!hasPermission('PAYROLL:READ')) {
     return (
-      <div className="p-8">
+      <div className="w-full p-8">
         <div className="p-8 bg-white rounded-2xl border-2 border-gray-100 text-center">
           <HandCoins className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">You do not have permission to access Payroll Management</p>

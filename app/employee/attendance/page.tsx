@@ -14,6 +14,9 @@ import {
   Star,
   RefreshCw,
   Search,
+  Send,
+  MapPin,
+  Loader2,
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -21,8 +24,10 @@ import {
   checkOut,
   fetchUserTodayAttendance,
   fetchUserAttendanceHistory,
-  fetchAttendanceConfig,
+  createRegularizationRequest,
+  fetchMyRegularizationRequests,
   AttendanceRecord,
+  AttendanceRegularizationRequest,
 } from '@/store/actions/attendanceActions';
 
 interface User {
@@ -75,7 +80,7 @@ export default function EmployeeAttendancePage() {
   const { selectedUserAttendance, loading, error } = useAppSelector((s) => s.attendance);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'today' | 'history'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'history' | 'regularization'>('today');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -85,6 +90,59 @@ export default function EmployeeAttendancePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [regularizationDate, setRegularizationDate] = useState('');
+  const [regularizationCheckIn, setRegularizationCheckIn] = useState('');
+  const [regularizationCheckOut, setRegularizationCheckOut] = useState('');
+  const [regularizationReason, setRegularizationReason] = useState('');
+  const [regError, setRegError] = useState('');
+  const [regSuccess, setRegSuccess] = useState('');
+  const [myRequests, setMyRequests] = useState<AttendanceRegularizationRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [lastLocation, setLastLocation] = useState<{ lat: number; lng: number; address?: string } | null>(null);
+  // ── Geolocation helpers ──────────────────────────────────────────────────
+
+  const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser'));
+        return;
+      }
+      setLocationLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocationLoading(false);
+          resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          setLocationLoading(false);
+          let msg = 'Unable to get location';
+          if (err.code === 1) msg = 'Location permission denied';
+          else if (err.code === 2) msg = 'Location unavailable';
+          else if (err.code === 3) msg = 'Location request timed out';
+          reject(new Error(msg));
+        },
+        { timeout: 10000, enableHighAccuracy: true }
+      );
+    });
+  };
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string | undefined> => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return data.display_name;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // ── End helpers ────────────────────────────────────────────────────────
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const historyPerPage = 10;
 
@@ -102,7 +160,6 @@ export default function EmployeeAttendancePage() {
       setCurrentUser(u);
       if (u.id) {
         dispatch(fetchUserTodayAttendance(u.id));
-        dispatch(fetchAttendanceConfig());
       }
     }
   }, [dispatch]);
@@ -127,19 +184,40 @@ export default function EmployeeAttendancePage() {
         }
       });
     }
+    if (activeTab === 'regularization' && currentUser?.id) {
+      setLoadingRequests(true);
+      dispatch(fetchMyRegularizationRequests()).then((result) => {
+        setLoadingRequests(false);
+        if (fetchMyRegularizationRequests.fulfilled.match(result)) {
+          setMyRequests(Array.isArray(result.payload) ? result.payload : []);
+        }
+      });
+    }
   }, [activeTab, currentUser, dispatch, records.length]);
 
   const handleCheckIn = async () => {
     setCheckingIn(true);
     setLocalError(null);
     setSuccessMsg(null);
-    const result = await dispatch(checkIn());
-    if (checkIn.fulfilled.match(result)) {
-      setSuccessMsg('Checked in successfully!');
-      if (currentUser?.id) dispatch(fetchUserTodayAttendance(currentUser.id));
-    } else {
-      setLocalError((result.payload as string) || 'Check-in failed');
+    setLocationError(null);
+
+    try {
+      const position = await getCurrentLocation();
+      const { lat, lng } = position;
+      const address = await reverseGeocode(lat, lng);
+      setLastLocation({ lat, lng, address });
+
+      const result = await dispatch(checkIn({ lat, lng, address }));
+      if (checkIn.fulfilled.match(result)) {
+        setSuccessMsg('Checked in successfully!');
+        if (currentUser?.id) dispatch(fetchUserTodayAttendance(currentUser.id));
+      } else {
+        setLocalError((result.payload as string) || 'Check-in failed');
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Check-in failed');
     }
+
     setCheckingIn(false);
   };
 
@@ -147,13 +225,25 @@ export default function EmployeeAttendancePage() {
     setCheckingOut(true);
     setLocalError(null);
     setSuccessMsg(null);
-    const result = await dispatch(checkOut());
-    if (checkOut.fulfilled.match(result)) {
-      setSuccessMsg('Checked out successfully!');
-      if (currentUser?.id) dispatch(fetchUserTodayAttendance(currentUser.id));
-    } else {
-      setLocalError((result.payload as string) || 'Check-out failed');
+    setLocationError(null);
+
+    try {
+      const position = await getCurrentLocation();
+      const { lat, lng } = position;
+      const address = await reverseGeocode(lat, lng);
+      setLastLocation({ lat, lng, address });
+
+      const result = await dispatch(checkOut({ lat, lng, address }));
+      if (checkOut.fulfilled.match(result)) {
+        setSuccessMsg('Checked out successfully!');
+        if (currentUser?.id) dispatch(fetchUserTodayAttendance(currentUser.id));
+      } else {
+        setLocalError((result.payload as string) || 'Check-out failed');
+      }
+    } catch (err: any) {
+      setLocalError(err.message || 'Check-out failed');
     }
+
     setCheckingOut(false);
   };
 
@@ -170,6 +260,50 @@ export default function EmployeeAttendancePage() {
           }
         });
       }
+      if (activeTab === 'regularization') {
+        setLoadingRequests(true);
+        dispatch(fetchMyRegularizationRequests()).then((result) => {
+          setLoadingRequests(false);
+          if (fetchMyRegularizationRequests.fulfilled.match(result)) {
+            setMyRequests(Array.isArray(result.payload) ? result.payload : []);
+          }
+        });
+      }
+    }
+  };
+
+  const handleRegSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError('');
+    setRegSuccess('');
+
+    if (!regularizationDate) { setRegError('Date is required'); return; }
+    if (!regularizationReason.trim()) { setRegError('Reason is required'); return; }
+    if (!regularizationCheckIn && !regularizationCheckOut) { setRegError('At least one of Check-in or Check-out time is required'); return; }
+
+    const checkInISO = regularizationCheckIn
+      ? new Date(`${regularizationDate}T${regularizationCheckIn}:00`).toISOString()
+      : undefined;
+    const checkOutISO = regularizationCheckOut
+      ? new Date(`${regularizationDate}T${regularizationCheckOut}:00`).toISOString()
+      : undefined;
+
+    const result = await dispatch(createRegularizationRequest({
+      date: regularizationDate,
+      requestedCheckInAt: checkInISO,
+      requestedCheckOutAt: checkOutISO,
+      reason: regularizationReason,
+    }));
+
+    if (createRegularizationRequest.fulfilled.match(result)) {
+      setRegSuccess('Regularization request submitted successfully!');
+      setRegularizationDate('');
+      setRegularizationCheckIn('');
+      setRegularizationCheckOut('');
+      setRegularizationReason('');
+      setMyRequests((prev) => [result.payload, ...prev]);
+    } else {
+      setRegError((result.payload as string) || 'Failed to submit request');
     }
   };
 
@@ -208,7 +342,7 @@ export default function EmployeeAttendancePage() {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <div className="flex gap-6">
-          {(['today', 'history'] as const).map((tab) => (
+          {(['today', 'history', 'regularization'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setHistoryPage(1); setSearchTerm(''); }}
@@ -218,7 +352,7 @@ export default function EmployeeAttendancePage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              {tab === 'today' ? "Today's Attendance" : 'Attendance History'}
+              {tab === 'today' ? "Today's Attendance" : tab === 'history' ? 'Attendance History' : 'Regularization'}
             </button>
           ))}
         </div>
@@ -264,6 +398,14 @@ export default function EmployeeAttendancePage() {
             </div>
           </div>
 
+          {/* Out Duty / Restricted Notice */}
+          {today?.actionState?.disableCheckIn && today?.actionState?.disableCheckOut && today?.actionState?.reason ? (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 text-center">
+              <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+              <p className="text-amber-700 font-semibold text-base">{today.actionState.reason}</p>
+            </div>
+          ) : (
+            <>
           {/* Check In / Out Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Check In Card */}
@@ -278,14 +420,26 @@ export default function EmployeeAttendancePage() {
                 </div>
               </div>
               {!isCheckedIn ? (
-                <button
-                  onClick={handleCheckIn}
-                  disabled={checkingIn}
-                  className="w-full py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
-                >
-                  {checkingIn ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                  {checkingIn ? 'Checking in...' : 'Check In'}
-                </button>
+                today?.actionState?.disableCheckIn ? (
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-amber-600 text-xs font-medium mb-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Check-in Disabled
+                    </div>
+                    {today?.actionState?.reason && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">{today.actionState.reason}</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleCheckIn}
+                    disabled={checkingIn || locationLoading}
+                    className="w-full py-2.5 bg-[#0445AD] hover:bg-[#033080] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                  >
+                    {checkingIn || locationLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+                    {locationLoading ? 'Getting location...' : checkingIn ? 'Checking in...' : 'Check In'}
+                  </button>
+                )
               ) : (
                 <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
                   <CheckCircle className="w-4 h-4" /> Checked In
@@ -321,14 +475,26 @@ export default function EmployeeAttendancePage() {
                 </div>
               </div>
               {!isCheckedOut ? (
-                <button
-                  onClick={handleCheckOut}
-                  disabled={!isCheckedIn || checkingOut}
-                  className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
-                >
-                  {checkingOut ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-                  {checkingOut ? 'Checking out...' : 'Check Out'}
-                </button>
+                today?.actionState?.disableCheckOut ? (
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-amber-600 text-xs font-medium mb-1">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Check-out Disabled
+                    </div>
+                    {today?.actionState?.reason && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">{today.actionState.reason}</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleCheckOut}
+                    disabled={!isCheckedIn || checkingOut || locationLoading}
+                    className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2"
+                  >
+                    {checkingOut || locationLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                    {locationLoading ? 'Getting location...' : checkingOut ? 'Checking out...' : 'Check Out'}
+                  </button>
+                )
               ) : (
                 <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
                   <CheckCircle className="w-4 h-4" /> Checked Out
@@ -350,6 +516,34 @@ export default function EmployeeAttendancePage() {
               )}
             </div>
           </div>
+          </>
+          )}
+
+          {/* Location Info */}
+          {lastLocation && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 text-[#0445AD] mt-0.5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-700">Location Captured</p>
+                  {lastLocation.address ? (
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{lastLocation.address}</p>
+                  ) : null}
+                  <p className="text-xs text-gray-400 mt-0.5 font-mono">
+                    {lastLocation.lat.toFixed(6)}, {lastLocation.lng.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Location Error */}
+          {locationError && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+              <MapPin className="w-4 h-4 shrink-0" />
+              {locationError}
+            </div>
+          )}
         </div>
       )}
 
@@ -438,6 +632,149 @@ export default function EmployeeAttendancePage() {
                     Next
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Regularization Tab */}
+      {activeTab === 'regularization' && (
+        <div className="space-y-5">
+          {/* Request Form */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-[#0445AD] to-[#033080] text-white">
+              <h2 className="text-base font-bold">Request Attendance Regularization</h2>
+              <p className="text-xs text-white/70 mt-0.5">Submit a correction for missed or wrong attendance</p>
+            </div>
+            <form onSubmit={handleRegSubmit} className="p-6 space-y-4">
+              {regError && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  <XCircle className="w-4 h-4 shrink-0" />{regError}
+                </div>
+              )}
+              {regSuccess && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                  <CheckCircle className="w-4 h-4 shrink-0" />{regSuccess}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">Date <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    value={regularizationDate}
+                    onChange={(e) => setRegularizationDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">Requested Check-In</label>
+                  <input
+                    type="time"
+                    value={regularizationCheckIn}
+                    onChange={(e) => setRegularizationCheckIn(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-gray-700">Requested Check-Out</label>
+                  <input
+                    type="time"
+                    value={regularizationCheckOut}
+                    onChange={(e) => setRegularizationCheckOut(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5 text-gray-700">Reason <span className="text-red-500">*</span></label>
+                <textarea
+                  value={regularizationReason}
+                  onChange={(e) => setRegularizationReason(e.target.value)}
+                  rows={3}
+                  placeholder="Explain why you need this regularization (e.g., forgot to check in due to network issue)..."
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  required
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#0445AD] text-white rounded-lg text-sm font-semibold hover:bg-[#033080] transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  Submit Request
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setRegularizationDate(''); setRegularizationCheckIn(''); setRegularizationCheckOut(''); setRegularizationReason(''); setRegError(''); setRegSuccess(''); }}
+                  className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 transition"
+                >
+                  Clear
+                </button>
+              </div>
+              <p className="text-xs text-gray-400">At least one of Check-in or Check-out time is required. Backend will match a policy to route your request to the appropriate approver.</p>
+            </form>
+          </div>
+
+          {/* My Requests */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-base font-bold text-gray-900">My Regularization Requests</h2>
+              <button onClick={handleRefresh} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 hover:text-[#0445AD] hover:bg-blue-50 rounded-lg transition">
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingRequests ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+            {loadingRequests ? (
+              <div className="flex items-center justify-center py-10"><div className="h-6 w-6 border-2 border-[#0445AD] border-t-transparent rounded-full animate-spin" /></div>
+            ) : myRequests.length === 0 ? (
+              <div className="p-10 text-center">
+                <Clock className="w-10 h-10 mx-auto text-gray-200 mb-2" />
+                <p className="text-sm text-gray-400">No regularization requests yet</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      {['Date', 'Check-In Requested', 'Check-Out Requested', 'Reason', 'Status', 'Submitted'].map((h) => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {myRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-gray-50/50 transition">
+                        <td className="px-4 py-3.5 text-sm text-gray-800">
+                          {req.date ? new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">
+                          {req.requestedCheckInAt ? new Date(req.requestedCheckInAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600">
+                          {req.requestedCheckOutAt ? new Date(req.requestedCheckOutAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 max-w-[200px] truncate" title={req.reason}>{req.reason}</td>
+                        <td className="px-4 py-3.5">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                            req.status === 'REJECTED' ? 'bg-red-100 text-red-700' :
+                            req.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {formatStatus(req.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-gray-400">
+                          {req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

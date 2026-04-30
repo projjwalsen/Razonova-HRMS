@@ -999,8 +999,8 @@ function PolicyDetailModal({ policy, onClose, onEdit }: { policy: LeavePolicy | 
   const fmt = (d?: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40">
+      <div className="bg-white z-99 rounded-xl shadow-2xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-100 flex items-center justify-between rounded-t-xl">
           <div>
@@ -1443,7 +1443,7 @@ function ApprovalPolicyDetailModal({ policy, onClose, onEdit }: { policy: Approv
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-100 rounded-t-xl flex items-center justify-between">

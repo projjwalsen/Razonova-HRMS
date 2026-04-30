@@ -10,6 +10,10 @@ import onboardingReducer from "./actions/onboardingActions";
 import attendanceReducer from "./actions/attendanceActions";
 import leaveReducer from "./actions/leaveActions";
 import payrollReducer from "./actions/payrollActions";
+import feedReducer from "./slices/feedSlice";
+import resignationReducer from "./actions/resignationActions";
+import userReducer from "./actions/userActions";
+import contactReducer from "./actions/contactActions";
 
 export const store = configureStore({
   reducer: {
@@ -24,6 +28,10 @@ export const store = configureStore({
     attendance: attendanceReducer,
     leave: leaveReducer,
     payroll: payrollReducer,
+    feed: feedReducer,
+    resignation: resignationReducer,
+    user: userReducer,
+    contact: contactReducer,
   },
 });
 

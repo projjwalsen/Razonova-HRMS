@@ -27,10 +27,9 @@ const initialState: DesignationState = {
 
 export const fetchDesignations = createAsyncThunk<Designation[], void>(
   "designations/fetchAll",
-  async (_, { rejectWithValue, getState }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const state = getState() as { auth: { token: string | null } };
-      const token = state.auth.token;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/org/designations`,

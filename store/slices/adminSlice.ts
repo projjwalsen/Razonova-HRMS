@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
   fetchDashboardKPIs,
+  fetchCompanyDashboardKPIs,
   fetchOrganizations,
   fetchPendingOrganizations,
   approveOrganization,
@@ -14,6 +15,7 @@ import {
   updateTenantModules,
   cancelSubscription,
   DashboardKPIs,
+  CompanyDashboardKPIs,
   Organization,
   OrgUsersResponse,
   SubscriptionModule,
@@ -23,6 +25,7 @@ import {
 
 interface AdminState {
   dashboardKPIs: DashboardKPIs | null;
+  companyDashboardKPIs: CompanyDashboardKPIs | null;
   organizations: Organization[];
   pendingOrganizations: Organization[];
   orgUsers: OrgUsersResponse[];
@@ -48,6 +51,7 @@ interface AdminState {
 
 const initialState: AdminState = {
   dashboardKPIs: null,
+  companyDashboardKPIs: null,
   organizations: [],
   pendingOrganizations: [],
   orgUsers: [],
@@ -91,7 +95,7 @@ const adminSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch Dashboard KPIs
+    // Fetch Platform Dashboard KPIs
     builder.addCase(fetchDashboardKPIs.pending, (state) => {
       state.kpiLoading = true;
       state.kpiError = null;
@@ -101,6 +105,20 @@ const adminSlice = createSlice({
       state.dashboardKPIs = action.payload;
     });
     builder.addCase(fetchDashboardKPIs.rejected, (state, action) => {
+      state.kpiLoading = false;
+      state.kpiError = action.payload as string;
+    });
+
+    // Fetch Company Dashboard KPIs
+    builder.addCase(fetchCompanyDashboardKPIs.pending, (state) => {
+      state.kpiLoading = true;
+      state.kpiError = null;
+    });
+    builder.addCase(fetchCompanyDashboardKPIs.fulfilled, (state, action) => {
+      state.kpiLoading = false;
+      state.companyDashboardKPIs = action.payload;
+    });
+    builder.addCase(fetchCompanyDashboardKPIs.rejected, (state, action) => {
       state.kpiLoading = false;
       state.kpiError = action.payload as string;
     });
@@ -252,7 +270,7 @@ const adminSlice = createSlice({
       state.actionError = null;
       state.actionSuccess = null;
     });
-    builder.addCase(assignModulesToTenant.fulfilled, (state, action) => {
+    builder.addCase(assignModulesToTenant.fulfilled, (state) => {
       state.actionLoading = false;
       state.actionSuccess = "Modules assigned successfully";
     });
@@ -267,7 +285,7 @@ const adminSlice = createSlice({
       state.actionError = null;
       state.actionSuccess = null;
     });
-    builder.addCase(updateTenantModules.fulfilled, (state, action) => {
+    builder.addCase(updateTenantModules.fulfilled, (state) => {
       state.actionLoading = false;
       state.actionSuccess = "Modules updated successfully";
     });

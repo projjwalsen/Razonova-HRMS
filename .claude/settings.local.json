@@ -56,7 +56,13 @@
       "Bash(pip show *)",
       "Bash(python -c \"import docx; print\\('python-docx available'\\)\")",
       "Bash(npm install *)",
-      "Bash(node generate_docx.js)"
+      "Bash(node generate_docx.js)",
+      "Bash(grep -v \"^$\")",
+      "Bash(sed -i -e 's/value={familyForm\\\\.dateOfBirth}/value={familyForm.dateOfBirth ?? \"\"}/g' app/employee/profile/page.tsx)",
+      "Bash(sed -i -e 's/value={familyForm\\\\.phone}/value={familyForm.phone ?? \"\"}/g' app/employee/profile/page.tsx)",
+      "Bash(sed -i -e 's/value={familyForm\\\\.email}/value={familyForm.email ?? \"\"}/g' app/employee/profile/page.tsx)",
+      "Bash(sed -i -e 's/value={familyForm\\\\.occupation}/value={familyForm.occupation ?? \"\"}/g' app/employee/profile/page.tsx)",
+      "Bash(npm run *)"
     ]
   }
 }

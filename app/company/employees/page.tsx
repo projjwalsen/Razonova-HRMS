@@ -48,6 +48,17 @@ const ROLE_OPTIONS = [
   { value: 'MANAGER', label: 'Manager' },
 ];
 
+const SOURCE_OF_HIRE_OPTIONS = [
+  { value: 'DIRECT', label: 'Direct' },
+  { value: 'REFERRAL', label: 'Referral' },
+  { value: 'JOB_PORTAL', label: 'Job Portal' },
+  { value: 'LINKEDIN', label: 'LinkedIn' },
+  { value: 'CONSULTANCY', label: 'Consultancy' },
+  { value: 'CAMPUS', label: 'Campus' },
+  { value: 'WALK_IN', label: 'Walk-in' },
+  { value: 'OTHER', label: 'Other' },
+];
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -96,7 +107,7 @@ function Modal({ open, onClose, title, children, size = 'max-w-lg' }: {
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-99 flex items-center justify-center bg-black/40">
       <div className={`bg-white rounded-xl shadow-2xl w-full ${size} mx-4 max-h-[90vh] overflow-y-auto`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-xl z-10">
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
@@ -162,6 +173,7 @@ export default function EmployeesPage() {
     employeeCode: '',
     joiningDate: '',
     proposedSalary: '',
+    sourceOfHire: '',
   });
 
   // Fetch employees
@@ -254,6 +266,7 @@ export default function EmployeesPage() {
       employeeCode: '',
       joiningDate: '',
       proposedSalary: '',
+      sourceOfHire: '',
     });
     setFormError('');
   };
@@ -290,6 +303,7 @@ export default function EmployeesPage() {
         employeeCode: form.employeeCode || undefined,
         joiningDate: form.joiningDate || undefined,
         proposedSalary: form.proposedSalary ? Number(form.proposedSalary) : undefined,
+        sourceOfHire: form.sourceOfHire || undefined,
       })
     );
 
@@ -330,7 +344,7 @@ export default function EmployeesPage() {
   ) : null;
 
   return (
-    <div className="p-8">
+    <div className="w-full p-8">
       <div ref={contentRef}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8 employee-item">
@@ -419,6 +433,12 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Field label="Proposed Salary">
                     <Input type="number" value={form.proposedSalary} onChange={(e) => setForm({ ...form, proposedSalary: e.target.value })} placeholder="Enter salary" />
+                  </Field>
+                  <Field label="Source of Hire">
+                    <Select value={form.sourceOfHire} onChange={(e) => setForm({ ...form, sourceOfHire: e.target.value })}>
+                      <option value="">Select Source</option>
+                      {SOURCE_OF_HIRE_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </Select>
                   </Field>
                 </div>
 
@@ -675,9 +695,9 @@ export default function EmployeesPage() {
 
       {/* Update Employee Modal */}
       <Modal open={showUpdateModal} onClose={() => setShowUpdateModal(false)} title="Update Employee" size="max-w-3xl">
-        <form onSubmit={handleUpdate} className="space-y-6">
+        <form onSubmit={handleUpdate} className="space-y-6 z-99">
           {/* Basic Info */}
-          <div>
+          <div className='z-99'>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Basic Information</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Full Name" required>

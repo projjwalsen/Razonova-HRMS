@@ -21,6 +21,7 @@ import {
   LogOut,
   Bell,
   User,
+  PartyPopper,
 } from 'lucide-react';
 import { useAppDispatch } from '@/store/hooks';
 import { logout } from '@/store/slices/authSlice';
@@ -35,15 +36,19 @@ interface NavItem {
 const COMPANY_NAV: NavItem[] = [
   { href: '/company/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/company/employees', label: 'Employees', icon: Users },
-  { href: '/company/departments', label: 'Departments', icon: Building },
-  { href: '/company/payroll', label: 'Payroll', icon: HandCoins },
-  { href: '/company/recruitment', label: 'Recruitment', icon: Briefcase },
-  { href: '/company/performance', label: 'Performance', icon: TrendingUp },
-  { href: '/company/training', label: 'Training', icon: GraduationCap },
-  { href: '/organization', label: 'Settings', icon: Settings },
   { href: '/company/attendance', label: 'Attendance', icon: Clock },
   { href: '/company/leave', label: 'Leave', icon: CalendarCheck },
-  { href: '/company/reports', label: 'Reports', icon: BarChart3 },
+  // { href: '/company/departments', label: 'Departments', icon: Building },
+  { href: '/company/payroll', label: 'Payroll', icon: HandCoins },
+  // { href: '/company/recruitment', label: 'Recruitment', icon: Briefcase },
+  // { href: '/company/performance', label: 'Performance', icon: TrendingUp },
+  // { href: '/company/training', label: 'Training', icon: GraduationCap },
+  { href: '/organization', label: 'Settings', icon: Settings },
+  
+  { href: '/company/feed', label: 'Feeds', icon: PartyPopper  },
+  { href: '/company/resignation', label: 'Resignation', icon: LogOut  },
+  // { href: '/company/reports', label: 'Reports', icon: BarChart3 },
+
 ];
 
 const SUPER_ADMIN_NAV: NavItem[] = [
@@ -98,7 +103,7 @@ export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`bg-white text-black min-h-[calc(100vh)] fixed left-0 top-15 z-50 flex flex-col transition-all duration-300 ${collapsed ? 'w-18' : 'w-64'}`}
+      className={`bg-white text-black min-h-full fixed left-0 top-15 z-50 flex flex-col transition-all duration-300 ${collapsed ? 'w-18' : 'w-64'}`}
     >
      
 
