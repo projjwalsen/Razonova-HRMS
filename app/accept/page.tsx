@@ -160,10 +160,10 @@ function AcceptInviteContent() {
         </div>
 
         <Image
-          src="/logo.png"
+          src="/Logo.svg"
           alt="Logo"
-          width={150}
-          height={32}
+          width={70}
+          height={10}
           className="mx-auto mb-4"
         />
 

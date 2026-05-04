@@ -57,7 +57,7 @@ export default function LoginPage() {
         <div className=" px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="Logo" width={150} height={20} />
+            <Image src="/Logo.svg" alt="Logo" width={70} height={10} />
 
           </div>
 
@@ -82,7 +82,7 @@ export default function LoginPage() {
           <div className="w-full lg:w-[50%] flex flex-col justify-center">
             {/* Mini brand */}
             <div className="flex items-center gap-2 mb-6">
-              <Image src="/logo.png" alt="Logo" width={200} height={34} className="rounded-sm" />
+              <Image src="/Logo.svg" alt="Logo" width={70} height={10} className="rounded-sm" />
 
             </div>
 
