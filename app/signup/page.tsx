@@ -63,7 +63,7 @@ export default function SignUpPage() {
         <div className=" px-6 py-3 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="Logo" width={150} height={32} />
+            <Image src="/Logo.svg" alt="Logo" width={70} height={10} />
 
           </div>
 
@@ -88,7 +88,7 @@ export default function SignUpPage() {
           <div className="w-full lg:w-[55%] p-8 sm:p-10 xl:p-14 flex flex-col justify-center">
             {/* Mini brand */}
             <div className="flex items-center gap-2 mb-6">
-              <Image src="/logo.png" alt="Logo" width={190} height={24} className="rounded-sm" />
+              <Image src="/Logo.svg" alt="Logo" width={70} height={10} className="rounded-sm" />
 
             </div>
 

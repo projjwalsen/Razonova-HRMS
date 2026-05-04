@@ -56,13 +56,10 @@ export function Navbar() {
 
   return (
     <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white/90 backdrop-blur-md border border-gray-100 shadow-lg rounded-2xl w-[calc(100%-2rem)] max-w-5xl mx-auto">
-      <div className="max-w-fit mx-auto px-6">
+      <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between h-16">
-          <a href="#home" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#0445AD] rounded-lg flex items-center justify-center">
-              <Layers className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900">HRAutomata</span>
+          <a href="#home" className="flex items-start">
+            <img src="/Logo.svg" alt="HRAutomata Logo" className="h-10 w-auto" />
           </a>
 
           <div className="hidden xl:flex items-center gap-1">

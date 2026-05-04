@@ -34,7 +34,7 @@ const Header = () => {
       <div className="w-full bg-white px-6 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <Image src="/logo.png" alt="Logo" width={150} height={32} />
+          <Image src="/Logo.svg" alt="Logo" width={70} height={10} />
         </div>
 
         {/* Nav right */}
